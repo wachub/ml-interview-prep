@@ -56,7 +56,7 @@ A CNN favors local, translation-related patterns; L2 favors smaller weights; a t
 :::
 </details>
 
-### Q: What is the bias–variance decomposition?
+### Q: What is the bias–variance decomposition? {#q-bias-variance}
 
 **Short answer:** Under squared-error regression, expected prediction error at a fixed input equals squared bias, variance from changing the training dataset, and irreducible noise. It separates systematic error, training-sample sensitivity, and noise that no predictor of \(X\) can remove.
 
@@ -282,7 +282,7 @@ It can act through penalties, architecture, augmentation, stochastic training, o
 #### Follow-ups
 
 - Can selecting regularization overfit validation? Yes, after enough adaptive searches.
-- Why not simply stop when validation loss rises? That is early stopping, one regularizer with its own noise and tuning issues.
+- Why not simply stop when validation loss rises? That is [early stopping](#q-stop-training), one regularizer with its own noise and tuning issues.
 :::
 </details>
 
@@ -322,7 +322,7 @@ Rescaling a feature changes coefficient magnitude without necessarily changing t
 :::
 </details>
 
-### Q: Is L2 regularization the same as weight decay? How do you choose lambda?
+### Q: Is L2 regularization the same as weight decay? How do you choose lambda? {#q-weight-decay}
 
 **Short answer:** L2 and weight decay are equivalent in simple SGD under matching conventions, but not generally in adaptive optimizers: decoupled weight decay shrinks weights separately from adaptive gradients. Choose lambda on validation data, usually over a logarithmic range; too high underfits and too low leaves excess sensitivity to training noise.
 
@@ -368,24 +368,50 @@ With correlated predictors, L1 may select one and drop another, making the chose
 
 ## Training Procedures that Regularize
 
-### Q: Why is early stopping a form of regularization? How do you decide when to stop?
+### Q: How do you decide when to stop training a model? {#q-stop-training}
 
-**Short answer:** Training longer can fit progressively finer training-specific patterns, so stopping when held-out performance stops improving limits effective complexity. Predefine a validation metric, evaluation cadence, patience window, and checkpoint rule rather than repeatedly tuning the stopping decision.
+**Short answer:** I choose a validation metric that reflects the task, save checkpoints, and stop after that metric has failed to improve for a predefined patience window. I interpret the curve with training loss and the learning-rate schedule, because one noisy validation increase is weak evidence; I deploy the best validated checkpoint, not automatically the final epoch.
 
 <details><summary><strong>Expand explanation</strong></summary>
 
-::: {.panel-tabset}
-#### Deep Dive
+::: {.question-source}
+Google MLE interview writeup · 2026
+:::
 
-Early stopping and L2 can be used independently or together: L2 changes the objective continuously, while early stopping limits optimization time based on held-out behavior.
+::: {.panel-tabset}
+#### Decision Rule
+
+Before training, define the monitored metric, evaluation cadence, minimum meaningful improvement, patience, and checkpoint-selection rule. Smooth or aggregate only for diagnosis; retain the raw measurements. If the task metric is noisy, confirm the stopping region across seeds or evaluations rather than reacting to one point.
+
+#### Reading the Curves
+
+- Falling training and validation loss usually indicates useful learning.
+- Falling training loss with persistently rising validation loss is evidence of overtraining or shift and supports an earlier checkpoint.
+- Both losses high and still falling suggests undertraining, inadequate optimization, or insufficient capacity.
+- A learning-rate drop may unlock later improvement, so patience should make sense relative to the schedule.
+
+#### Early Stopping as Regularization
+
+Stopping limits how far optimization can fit fine-grained training-specific patterns, so it controls effective complexity. Unlike L2, it constrains the optimization path rather than adding a weight penalty. The two can be used independently or together.
+
+#### Checkpoint Selection
+
+Deploy the checkpoint with the best validated selection metric subject to any constraints, then evaluate that frozen choice on the test set. The last checkpoint is useful for resuming training, but it is not necessarily the best model to serve.
+
+#### Follow-ups
+
+- **Why can validation loss rise while training loss falls?** The model may be fitting training-specific noise; first rule out split, preprocessing, and evaluation bugs.
+- **Why not stop after the first increase?** Validation estimates are noisy and optimization is not monotonic.
+- **Is early stopping regularization?** Yes: it limits effective complexity through training time.
+- **What if the product metric and validation loss disagree?** Select using the validated metric tied to the decision, while monitoring loss as a diagnostic.
 
 #### Common Mistakes
 
-Increasing validation loss while training loss falls can be overfitting, but first rule out split errors, leakage, preprocessing bugs, and distribution shift.
+Do not tune patience indefinitely on one validation set or assume “more epochs” and “overfitting” are the only explanations for a plateau.
 :::
 </details>
 
-### Q: What is dropout, and what happens at inference time?
+### Q: What is dropout, and what happens at inference time? {#q-dropout}
 
 **Short answer:** Dropout randomly masks activations during training, discouraging reliance on narrow co-adapted paths and sometimes improving generalization. It is normally disabled at inference, with the matching scaling convention so predictions are deterministic.
 
@@ -402,7 +428,7 @@ Dropout is not universally helpful when scale, architecture, augmentation, or ot
 :::
 </details>
 
-### Q: Why do data augmentation and noise injection improve generalization? Can they hurt?
+### Q: Why do data augmentation and noise injection improve generalization? Can they hurt? {#q-augmentation}
 
 **Short answer:** They encourage robustness to variations that should not change the target, reducing dependence on one exact training view. They hurt when the variation changes the label, destroys important signal, or does not resemble plausible deployment noise.
 
@@ -422,21 +448,47 @@ A modest crop may preserve an object label; a crop that removes the object does 
 
 ## Regularization Strategy
 
-### Q: If your model is overfitting, what would you try first?
+### Q: Your model is overfitting. When would you use weight decay, dropout, data augmentation, or a combination? {#q-overfitting-interventions}
 
-**Short answer:** First validate the diagnosis by checking split design, leakage, labels, learning curves, and deployment mismatch. Then establish a baseline and test targeted changes—often more representative data, valid augmentation, appropriate weight decay, or early stopping—one controlled factor at a time.
+**Short answer:** First confirm a real train–validation gap and rule out leakage or distribution mismatch. I use valid augmentation when known label-preserving variation is missing, weight decay when the fitted solution is overly sensitive or has excessive effective capacity, and dropout when brittle co-adaptation is plausible. I prefer more representative data when feasible and combine methods only when controlled ablations show complementary benefit.
 
 <details><summary><strong>Expand explanation</strong></summary>
 
+::: {.question-source}
+Google MLE interview writeup · 2026
+:::
+
 ::: {.panel-tabset}
+#### Diagnose First
+
+A low training loss plus materially worse validation performance suggests variance, but inspect curves by slice and rule out leakage, label problems, invalid preprocessing, and train/serving mismatch. If training performance is also poor, more regularization is likely the wrong first move.
+
+#### Choosing an Intervention
+
+- **Weight decay:** favor when parameter growth and sensitivity are plausible concerns; tune its strength with validation data. See [L2 and weight decay](#q-weight-decay).
+- **Dropout:** consider for neural networks showing brittle feature co-adaptation, especially when it is compatible with the architecture. See [dropout at training and inference](#q-dropout).
+- **Data augmentation:** prefer when you can encode valid label-preserving transformations that approximate deployment variation. See [augmentation and noise](#q-augmentation).
+- **More representative data:** often reduces variance without imposing a false constraint; prioritize missing slices and hard cases over raw volume.
+- **Lower model capacity:** useful when the model is unnecessarily expressive and simpler baselines retain the signal.
+
+#### Combining Methods
+
+Regularizers interact. Strong augmentation may make dropout unnecessary; weight decay and early stopping may provide complementary constraints. Add one controlled change at a time, then test combinations only when individual evidence supports them.
+
+#### Evidence
+
+Compare training and validation curves, the size of the generalization gap, important slice metrics, and variability across seeds. Seek repeatable held-out improvement without degrading the final product metric.
+
 #### Follow-ups
 
-- **More data or stronger regularization?** Representative data usually reduces variance without discarding signal; regularization helps when data are limited or capacity is excessive.
-- **What counts as evidence?** Seek repeatable improvement on an untouched or fresh holdout, without regression on the product-relevant metric.
+- More data or stronger regularization?
+- When would reducing model size be cleaner than adding dropout?
+- Could augmentation increase the train loss while improving validation performance?
+- How would you tell that regularization is too strong?
 
 #### Common Mistakes
 
-“Add regularization” is not a diagnosis. Test a specific hypothesis against a baseline.
+“Add every regularizer” is not a diagnosis. Each intervention should correspond to a hypothesis about why generalization is poor.
 :::
 </details>
 

@@ -35,6 +35,13 @@ body { color: var(--qa-ink); background: #fafaf8; }
 }
 #quarto-content section.level3 > h3 + p strong:first-child { color: var(--qa-muted); font-size: .86em; }
 #quarto-content section.level3 > details { margin-top: .9rem; }
+.question-source {
+  margin: -.45rem 0 .85rem;
+  color: var(--qa-muted);
+  font-size: .76rem;
+  letter-spacing: .015em;
+}
+.question-source p { margin: 0; }
 
 #quarto-content details > summary {
   display: inline-flex;

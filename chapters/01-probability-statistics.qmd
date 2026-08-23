@@ -276,7 +276,7 @@ If \(X\) is symmetric around zero and \(Y=X^2\), then \(Y\) is completely determ
 
 ## Likelihood and Estimation
 
-### Q: What are likelihood and maximum likelihood estimation?
+### Q: What are likelihood and maximum likelihood estimation? {#q-likelihood-mle}
 
 **Short answer:** Given observed data \(x_1,\dots,x_n\) and parameter \(\theta\), likelihood is
 
@@ -350,7 +350,57 @@ MAP selects one posterior mode. It is not the same as fully Bayesian prediction,
 
 ## Losses and Information Theory
 
-### Q: Why does MSE arise from Gaussian noise?
+### Q: What loss function would you optimize, and why? {#q-loss-selection}
+
+**Short answer:** I would choose a loss from the prediction task, a defensible probabilistic model, and the real cost of different errors, then verify that it has useful optimization behavior. The differentiable training loss need not equal the final product metric—for example, I may train with weighted cross-entropy but select a threshold using recall at an acceptable precision.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.question-source}
+Google MLE interview writeup · 2026
+:::
+
+::: {.panel-tabset}
+#### Decision Framework
+
+Start by specifying the target and prediction form: real value, class probability, count, ranking, or structured output. Then ask:
+
+1. Which data/noise assumptions are plausible?
+2. Are false positives and false negatives equally costly?
+3. Does the loss provide stable, informative gradients?
+4. How will the trained score be converted into a decision?
+5. Which held-out metric represents product value?
+
+#### Common Choices
+
+- **MSE:** a regression baseline with a Gaussian-noise interpretation; sensitive to large residuals.
+- **Cross-entropy:** negative log-likelihood for Bernoulli or categorical targets; suited to learning class probabilities.
+- **Weighted cross-entropy:** useful when error costs or sampling require more emphasis on certain classes. Weights should represent the intended objective, not be added automatically for imbalance.
+- **Negative log-likelihood:** the general principle behind many task-specific losses; the chosen likelihood determines the penalty.
+- **Ranking losses:** appropriate when relative ordering matters more than independently calibrated predictions, as in retrieval or recommendation.
+
+#### Training Loss vs Evaluation Metric
+
+Non-differentiable or decision-level metrics such as F1, recall at fixed precision, or business utility may be unsuitable for direct gradient optimization. A practical design uses a differentiable surrogate for training, then tunes thresholds or ranking policies on validation data and reports the product-relevant metric on held-out data.
+
+#### Connections
+
+The existing [likelihood and MLE question](#q-likelihood-mle) explains how a probabilistic assumption becomes a loss. [MSE and Gaussian noise](#q-mse-gaussian) is one concrete case; [entropy and cross-entropy](#q-information-theory) give the classification connection.
+
+#### Follow-ups
+
+- When would MAE or a robust loss be preferable to MSE?
+- How would asymmetric error costs change the objective or threshold?
+- Does class imbalance always require class-weighted loss?
+- How would you evaluate whether the surrogate loss aligns with the product metric?
+
+#### Common Mistakes
+
+Do not choose a loss only because it is conventional, and do not claim that lower training loss guarantees a better deployed decision. State the assumptions and how validation connects the surrogate objective to the final metric.
+:::
+</details>
+
+### Q: Why does MSE arise from Gaussian noise? {#q-mse-gaussian}
 
 **Short answer:** If \(Y\mid X=x\) is modeled as a Gaussian with mean \(f_\theta(x)\) and fixed variance, its negative log-likelihood is proportional to squared error. Thus minimizing MSE is maximum likelihood under that conditional-noise assumption.
 
@@ -359,7 +409,7 @@ MAP selects one posterior mode. It is not the same as fully Bayesian prediction,
 ::: {.panel-tabset}
 #### Mathematical View
 
-$$-log P(D\mid\theta)=\text{constant}+\frac{1}{2\sigma^2}\sum_i(y_i-f_\theta(x_i))^2.$$
+$$-\log P(D\mid\theta)=\text{constant}+\frac{1}{2\sigma^2}\sum_i(y_i-f_\theta(x_i))^2.$$
 
 #### Common Mistakes
 
@@ -367,7 +417,7 @@ MSE is sensitive to outliers, so Gaussian noise is not a good fit for every regr
 :::
 </details>
 
-### Q: What are entropy, cross-entropy, and KL divergence?
+### Q: What are entropy, cross-entropy, and KL divergence? {#q-information-theory}
 
 **Short answer:** For a discrete distribution \(p\), entropy is
 

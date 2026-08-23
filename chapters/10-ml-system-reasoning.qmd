@@ -1,17 +1,391 @@
 # ML System and Research Reasoning
 
-This chapter concerns ML decisions across a system or project lifecycle, rather than generic distributed-systems interview material.
+This chapter concerns ML decisions across a system or project lifecycle, rather than generic distributed-systems interview material. The visible layer is a compact answer framework; expand a question to examine the trade-offs an interviewer is likely to probe.
 
 ## Defining the problem, target, and labels
 
+### Q: Design an ML system to detect offensive or policy-violating multimedia or advertising content. {#q-offensive-content}
+
+**Short answer:** I would first turn policy into an operational label taxonomy, define the costs of each error, and choose slice-aware metrics. Then I would collect representative text, image, video, audio, and metadata examples; establish a rules or simple-model baseline; train a multimodal model; set policy-specific thresholds with a human-review path; deploy it as a latency-aware cascade; and monitor drift, appeals, and failures by policy and user slice.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+<p class="question-source"><small>Google MLE interview writeup · 2026</small></p>
+
+::: {.panel-tabset}
+#### Problem Framing
+
+Start by asking what *offensive* or *policy-violating* means in this product. The label may be hierarchical and multi-label: an item can contain hate, sexual content, violence, misleading claims, or a regulated-product violation at the same time. Specify whether the decision applies to an asset, an ad, an account, or an entire campaign, and how context, geography, audience age, and policy version affect the label.
+
+False negatives can expose users or create legal risk; false positives can suppress legitimate speech or revenue. Those costs suggest different thresholds and escalation rules for different violation types rather than one universal score cutoff.
+
+#### Data
+
+Build an adjudicated dataset from policy-review decisions, user reports, appeals, random traffic samples, and deliberately mined borderline cases. Include all modalities available at decision time—caption and OCR text, images or sampled video frames, audio transcripts, and relevant metadata—and evaluate representation across languages, regions, content formats, and publishers.
+
+The data specification should follow the principles in the [canonical training-data question](#q-training-data). In particular, split by time and by related entities where needed so that near-duplicate creatives or campaigns do not leak across splits.
+
+#### Model
+
+A credible baseline combines policy rules, keyword or OCR features, and simple per-modality classifiers. A stronger system can encode text, image, video, and audio separately, fuse their representations with metadata, and emit calibrated per-policy scores. A cascade can send obvious cases through cheap models, reserve a heavier multimodal model for uncertain cases, and route a narrow band to reviewers.
+
+The most complex model is not automatically the best choice: measure the gain over the baseline, especially on rare severe classes and difficult slices.
+
+#### Evaluation
+
+Report precision–recall curves and operating-point precision and recall for each policy class and important slice; aggregate accuracy can hide the failures that matter. Use cost-weighted metrics when error costs are explicit, assess calibration if scores drive thresholds, and estimate reviewer workload at each threshold.
+
+Offline labels need clear guidelines, reviewer agreement checks, and an appeals-informed audit set. The training objective may differ from the policy metric; see the [loss-function question](01-probability-statistics.qmd#q-loss-selection).
+
+#### Serving
+
+Choose the decision path from the product requirement. Ads may require synchronous approval before serving, while some user content can receive a fast preliminary decision followed by asynchronous deep review. Budget latency by stage, cache reusable asset representations, fail safely, and preserve the model, policy, and evidence versions behind each decision.
+
+#### Monitoring
+
+Monitor input and score drift, per-policy precision and recall from sampled review, appeal and reversal rates, reviewer disagreement, latency, and the share routed to humans. Policy changes and adversarial adaptation are expected, so dashboards and retraining data must be versioned by policy definition rather than silently mixing incompatible labels.
+
+#### Follow-ups
+
+- How would you label a long video whose violation appears briefly?
+- Where would you place human review under a fixed review budget?
+- How would you adapt when a new policy class has very few positives?
+- How would you test whether the system treats dialects, languages, or regions differently?
+:::
+</details>
+
 ## Metrics, baselines, and data collection
+
+### Q: What data would you collect to train this model, and why? {#q-training-data}
+
+**Short answer:** Training data should follow from the prediction target and approximate the distribution and information available at deployment. I would define labels and examples precisely, sample representative traffic plus important rare slices and hard negatives, control class balance without losing calibration information, prevent temporal or entity leakage, measure label quality, and verify that every training feature can be produced the same way at serving time.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+<p class="question-source"><small>Google MLE interview writeup · 2026</small></p>
+
+::: {.panel-tabset}
+#### Target and Unit
+
+Work backward from the decision: what is predicted, for which unit, at what time horizon, and using what information? A label such as “clicked” may be only a proxy for the actual goal, and a row might represent a user–item impression, an account, a session, or a future time window. Record label provenance and ambiguity rather than treating every stored value as ground truth.
+
+#### Sampling and Slices
+
+Start with traffic representative of deployment, then deliberately cover rare classes, new users or items, languages, regions, devices, and other high-cost slices. Mine hard negatives that resemble positives, but retain realistic or reweighted class priors so scores can be calibrated. Keep a random, production-like evaluation set even when training uses aggressive balancing.
+
+#### Leakage and Time
+
+Use temporal splits when future deployment is the goal, and group related examples so the same user, item, creative, or near duplicate cannot make validation unrealistically easy. Check every feature’s event time and availability. A feature computed after the prediction deadline is leakage even if it is highly predictive offline.
+
+#### Label Quality
+
+Write annotation guidelines, measure reviewer agreement, adjudicate ambiguous examples, and audit weak or automatically generated labels. Compare label sources—behavior, human judgment, business rules, and delayed outcomes—because each has characteristic noise and bias. Sample disagreements and high-confidence errors for targeted review.
+
+#### Training–Serving Consistency
+
+Use shared, versioned transformations when possible and test them on recorded requests. Monitor missingness, category vocabularies, normalization statistics, timestamp semantics, and feature freshness. A representative dataset cannot rescue a model whose online features are computed differently from its training features.
+
+#### Follow-ups
+
+- How would you collect labels when positives are extremely rare?
+- When is downsampling the majority class safe, and how would you correct probabilities afterward?
+- How would you detect a feature that leaks future information?
+- What changes if deployment traffic is expected to shift after launch?
+:::
+</details>
 
 ## Experimentation and model selection
 
+Model selection should begin with an explicit baseline and an experiment that isolates the value of each added component. The system questions below use that principle rather than treating architecture choice as the starting point.
+
 ## Offline and online evaluation
+
+### Q: How would you design a YouTube-like recommendation system? {#q-youtube-recommendation}
+
+**Short answer:** I would define the product objective, retrieve a few hundred relevant candidates, rank them with richer user, item, and context features, train from exposure-aware implicit and explicit signals, evaluate ranking quality and important slices offline, validate watch-quality and ecosystem outcomes online, serve within a strict latency budget, and monitor position bias, diversity, freshness, and feedback loops.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+<p class="question-source"><small>Google MLE interview writeup · 2026</small></p>
+
+::: {.panel-tabset}
+#### Objective and Architecture
+
+Specify the surface and goal first: home feed, next video, or search may optimize different notions of useful engagement. A two-stage architecture separates **candidate generation**, which cheaply retrieves hundreds from a very large corpus, from **ranking**, which scores those candidates with richer cross-features. A final policy layer can enforce safety, eligibility, diversity, and business constraints.
+
+#### Signals and Training
+
+Implicit signals include impressions, clicks, watch time, completion, skips, and repeat viewing; explicit signals include likes, dislikes, subscriptions, and surveys. A click is not equally valuable at every position, and raw watch time can reward long or sensational content, so define a quality-aware target and log what was actually exposed.
+
+Candidate and ranking models need appropriate negatives: exposed-but-skipped items are informative, while randomly sampled corpus items are cheap but often trivial. The full data specification should follow the [canonical training-data question](#q-training-data).
+
+#### Evaluation
+
+Offline, use retrieval recall for candidate generation and ranking metrics such as NDCG, recall at \(k\), calibrated outcome estimates, and slice metrics for the ranker. Replay data reflects the old policy and its position bias, so offline gains are evidence rather than final proof.
+
+Online experiments should measure the intended value—such as satisfied watch time or retention—alongside guardrails for complaints, unsafe exposure, latency, creator concentration, and long-term health. Check novelty and diversity rather than optimizing only the next click.
+
+#### Serving
+
+Precompute slow-moving user and item representations, retrieve with an approximate nearest-neighbor index or other candidate sources, and rank online with fresh context. Use multiple candidate channels for subscriptions, similarity, trends, and exploration; then deduplicate and apply eligibility constraints. Budget and monitor latency separately for retrieval, feature access, ranking, and post-ranking.
+
+#### Exploration and Feedback
+
+Fresh items and uncertain preferences need controlled exploration; otherwise an item must already have engagement to earn the exposure needed to collect engagement. Log exposure probabilities where possible, reserve randomized or exploratory traffic when appropriate, and compare performance across position and age-of-item slices.
+
+Deployment also changes the future training distribution. The [bias and feedback-loops question](#q-bias-feedback-loops) covers detection and mitigation without confusing these effects with mathematical bias–variance.
+
+#### Follow-ups
+
+- Would you optimize clicks, watch time, or retention, and what could each objective break?
+- How would you recommend for a new user or a new video?
+- Why not score every video with the ranking model?
+- How would you choose the loss? See the [canonical loss-function question](01-probability-statistics.qmd#q-loss-selection).
+:::
+</details>
 
 ## Deployment: latency, accuracy, and inference cost
 
+### Q: Design autocomplete and spell check for a mobile device. {#q-mobile-autocomplete}
+
+**Short answer:** I would define separate correction and next-token targets, generate a small candidate set, and rank it with a compressed language-aware model. The design must balance ranking quality with keystroke-level latency, memory, battery, privacy, and offline availability, so I would choose deliberately between on-device and server inference, personalize from consented local signals, and evaluate both text quality and user actions such as acceptance and immediate undo.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+<p class="question-source"><small>Google MLE interview writeup · 2026</small></p>
+
+::: {.panel-tabset}
+#### Candidate Generation
+
+For spell check, retrieve candidates using edit distance, keyboard-neighbor errors, phonetics, and a lexicon; context helps distinguish valid but unintended words. For autocomplete, use prefixes, frequent phrases, contacts or user vocabulary when permitted, and language-model proposals. Character or subword representations and a fallback that preserves typed text help with unseen names and words.
+
+#### Ranking
+
+Rank candidates from the typed prefix, left context, locale, app context, and user history available under the privacy design. A small language model can score fluency while lightweight features capture edit cost, frequency, and personalization. Calibrate a confidence threshold so the system can abstain rather than make an intrusive correction.
+
+#### On-device or Server
+
+On-device inference provides low and predictable latency, offline use, and stronger data minimization, but it imposes tight memory, compute, battery, and update constraints. Server models can be larger and updated quickly but add network tail latency, availability risk, and privacy concerns. A hybrid may keep common/private prediction local and call a server only when policy and connectivity allow.
+
+Compression options include quantization, pruning, distillation, vocabulary reduction, and caching of prefix states or common results. Measure performance on representative devices, not only a workstation.
+
+#### Evaluation and Personalization
+
+Offline metrics can include top-(k) recall, mean reciprocal rank, character or keystroke savings, correction precision, and latency/memory by device tier. Online, measure acceptance, immediate deletion or undo, typing time, and opt-out or complaint rates; acceptance alone can favor frequent but unhelpful suggestions.
+
+Personalization should have a safe fallback, bounded update rules, clear deletion semantics, and resistance to reinforcing accidental or offensive inputs. Use the [canonical data question](#q-training-data) to reason about representative languages, devices, and error patterns.
+
+#### Follow-ups
+
+- How would you handle code-switching or a newly coined word?
+- What should happen when the model is uncertain?
+- Which components would you personalize locally?
+- How would you compare a larger server model with a smaller on-device model fairly?
+:::
+</details>
+
+### Q: Design an ML system for email autocomplete or automatic responses. {#q-email-autocomplete}
+
+**Short answer:** I would first choose the action—continuing a draft, ranking short replies, or generating a response—then define exactly which thread and user context is permitted. I would build privacy-filtered training examples, generate and rank candidates, evaluate relevance and semantic correctness as well as acceptance, enforce safety and memorization controls, meet interactive latency, and personalize only with explicit data and rollback boundaries.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+<p class="question-source"><small>Google MLE interview writeup · 2026</small></p>
+
+::: {.panel-tabset}
+#### Target and Context
+
+Smart Compose predicts a continuation of the current draft; Smart Reply proposes complete short replies. That distinction changes labels, latency, and evaluation. Useful context may include the draft prefix, selected earlier messages, language, sender relationship, and user style, but every feature needs a privacy and availability justification.
+
+#### Model and Candidates
+
+A reply system can retrieve common intents, generate constrained candidates, or combine generation with a ranker; a compose system can use a causal language model with decoding constraints. Rank for contextual fit, fluency, specificity, and user preference, while allowing abstention. Avoid generating unsupported commitments, sensitive attributes, or content copied from unrelated messages.
+
+Candidate generation and ranking reuse the same basic pattern as [mobile autocomplete and spell check](#q-mobile-autocomplete), but email has longer context, greater privacy exposure, and a higher cost for changing the writer’s intended meaning.
+
+#### Evaluation and Safety
+
+Offline evaluation should include ranking quality or exact-match-style proxies, semantic relevance, contradiction and factuality checks, subgroup/language slices, privacy probes, and human review. Online measures include shown and accepted rates, characters saved, edits after acceptance, send-time changes, latency, and complaints. A high acceptance rate is not sufficient if suggestions are generic, coercive, or homogenize user expression.
+
+#### Serving and Personalization
+
+Cache reusable thread encodings where safe, limit context length explicitly, and use a fast model or cascade for interactive suggestions. Version filters and models, log only approved data, and fail by withholding a suggestion. Personalization can adapt tone or common phrases locally or with protected user features, but needs opt-out, deletion, cold-start behavior, and protection from one-off messages becoming permanent preferences.
+
+#### Follow-ups
+
+- How would you prevent leakage of another user’s email text?
+- When should the system abstain from suggesting a reply?
+- How would you detect that accepted suggestions materially changed user intent?
+- Which parts could run on-device?
+:::
+</details>
+
+### Q: How would you improve model inference throughput without unacceptable loss of quality? {#q-inference-throughput}
+
+**Short answer:** I would first profile the end-to-end service and separate throughput from per-request latency. Then I would improve batching and bucketing, reduce padded sequence work, raise accelerator utilization, and test smaller models, quantization, distillation, or caching where valid. Each change needs hardware-specific load tests and quality checks at the intended operating point; for an RNN, recurrent dependencies also limit parallelism across sequence positions.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+<p class="question-source"><small>Google MLE interview writeup · 2026; source variant asks specifically about an RNN-based model.</small></p>
+
+::: {.panel-tabset}
+#### Diagnose First
+
+Measure arrival patterns, batch sizes, sequence-length distribution, preprocessing, data transfer, accelerator kernels, memory, and postprocessing. Identify whether the bottleneck is compute, memory bandwidth, host work, I/O, or queueing. Throughput can rise while tail latency worsens, so state the latency service-level objective and test under realistic concurrency.
+
+#### System Levers
+
+- Batch independent requests up to the latency budget; use dynamic batching and length buckets to reduce padding.
+- Compile or fuse operations, reuse allocated buffers, overlap transfers with compute, and keep accelerators saturated.
+- Cache deterministic embeddings, encoder results, prefixes, or repeated outputs only when keys, freshness, privacy, and invalidation are correct.
+- Cap or route unusually long sequences rather than letting a few requests dominate every batch.
+
+#### Model Levers
+
+Use lower precision or quantization, pruning, distillation, a smaller architecture, fewer layers, shorter context, or an early-exit/cascade design. These are hypotheses, not free speedups: benchmark on target hardware because a theoretically smaller model may not use its kernels efficiently.
+
+Compare quality globally and on difficult slices, recalibrate scores if needed, and measure the entire service rather than model execution alone.
+
+#### RNN Variant
+
+An RNN state at step \(t\) depends on the state at \(t-1\), so positions within one sequence cannot generally be evaluated in parallel. Batching parallelizes across independent sequences, while length bucketing, packed sequences, truncated state, optimized recurrent kernels, quantization, and distillation reduce wasted or per-step work. Replacing the architecture is an option only if quality, memory, and latency measurements support it.
+
+See [RNN sequence mechanics](05-neural-networks.qmd#sec-rnn-throughput) for the architectural reason behind this constraint.
+
+#### Follow-ups
+
+- When would batching hurt the user-facing objective?
+- What can be cached safely, and how is it invalidated?
+- Why might quantization improve throughput but reduce quality on a particular slice?
+- Would you optimize tokens per second, requests per second, or time to first result?
+:::
+</details>
+
+### Q: What are the major steps in taking a trained ML model from experimentation to production? {#q-production-lifecycle}
+
+**Short answer:** I would make preprocessing and training reproducible; register the data, code, model, and configuration versions; package a stable serving interface; validate features, quality, safety, and performance before launch; deploy through shadow, canary, or staged traffic; monitor model and system behavior; keep a tested rollback path; and define ownership and triggers for retraining. Cloud vendors provide implementations, but those lifecycle guarantees are the durable design.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+<p class="question-source"><small>Google MLE interview writeup · 2026</small></p>
+
+::: {.panel-tabset}
+#### Reproducibility and Artifacts
+
+Version or hash training data snapshots, preprocessing code, feature definitions, model code, dependencies, configuration, seeds, and produced checkpoints. Record lineage so a prediction can be traced to its model and inputs and a candidate can be rebuilt. Treat model files and schemas as immutable artifacts, with review and access controls.
+
+#### Validation and Interface
+
+Define a request/response schema, feature freshness expectations, missing-value behavior, batch versus online semantics, and an abstention or fallback path. Before deployment, test training–serving parity, schema compatibility, representative quality slices, calibration and thresholds, safety constraints, latency, memory, load, and failure behavior.
+
+#### Rollout and Operations
+
+Use shadow evaluation, canaries, or staged traffic; compare against the current model; and promote only when quality and operational guardrails hold. Monitor input and prediction distributions, delayed labels, slice metrics, errors, latency, resource use, and business or safety guardrails. Preserve the last known-good model, feature logic, and configuration as one rollback unit.
+
+The [corrupted-pipeline incident question](09-evaluation-debugging.qmd#q-corrupt-pipeline) applies these lineage and rollback mechanisms to a concrete failure.
+
+#### Retraining
+
+Specify whether retraining is scheduled or triggered by drift, data volume, or performance; validate every new candidate as strictly as the first deployment. Prevent concurrent jobs from silently changing feature definitions, preserve comparison datasets, and assign humans ownership of alerts, approval, rollback, and incident review.
+
+GCP, AWS, or another platform can supply registries, orchestration, serving, and monitoring components. Naming a service is not a substitute for explaining these contracts.
+
+#### Follow-ups
+
+- What would make you stop or roll back a canary?
+- How do you prove online preprocessing matches training preprocessing?
+- Which artifacts must be versioned together?
+- How would you deploy a model whose labels arrive weeks later?
+:::
+</details>
+
 ## Monitoring, retraining, and feedback loops
 
+### Q: How would you detect and mitigate bias or feedback loops in an ML system? {#q-bias-feedback-loops}
+
+**Short answer:** I would first distinguish model error from sampling or label bias, systematic effects on users or groups, and deployment feedback loops. I would log both exposures and outcomes, evaluate calibrated performance and impact on meaningful slices, audit how data were collected, and use controlled exploration or randomized traffic where appropriate. Mitigation may require better sampling and labels, constraints or thresholds, product changes, and retraining on data that separates prior model behavior from the outcome of interest.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+<p class="question-source"><small>Google MLE interview writeup · 2026</small></p>
+
+::: {.panel-tabset}
+#### Distinctions
+
+- **Statistical or model bias** can mean systematic prediction error or restrictive modeling assumptions.
+- **Sampling and data bias** arise when collection, exposure, measurement, or labels misrepresent deployment.
+- **Systematic user effects** concern how errors, access, or outcomes differ across relevant groups and contexts.
+- **Feedback loops** occur when deployed decisions influence the observations used to train later models.
+
+This is not the squared-bias term in the [bias–variance decomposition](02-generalization-regularization.qmd#q-bias-variance), which compares the average learned predictor with the regression function.
+
+#### Detection
+
+Document the collection and decision process, then compare coverage, label quality, calibration, false-positive/false-negative rates, ranking exposure, and downstream outcomes across important slices. Monitor these quantities over time and inspect intersections, not only broad averages. Log which candidates were eligible and shown; observing only clicks gives no evidence about items the model hid.
+
+Use qualitative audits and appeals alongside metrics. A group difference is a prompt to investigate the task, data, measurement, thresholds, and product effects—not a diagnosis by itself.
+
+#### Feedback Loop
+
+The causal sequence is:
+
+> model decisions → change what users see → change user behavior → alter future collected data → subsequent models train on data influenced by earlier models
+
+A recommender that promotes already popular items, for example, may read the additional engagement it caused as proof that those items were intrinsically best. Selective labels create a similar problem when outcomes are known only for cases the old policy approved.
+
+#### Mitigation
+
+Log exposure and policy versions, keep suitable random or exploration traffic, and use basic counterfactual reasoning or propensity-aware evaluation when assumptions permit. Improve collection for missing slices, audit proxies and labels, reweight or resample carefully, and use group-aware constraints or thresholds only after defining the desired harm and trade-off.
+
+Where possible, separate historical model decisions from ground truth: obtain independent review samples, delayed outcomes, alternative-policy experiments, or labels for rejected cases. Monitor the mitigation for utility and unintended effects rather than assuming one intervention permanently solves the problem.
+
+#### Follow-ups
+
+- Why is comparing click rates across groups insufficient?
+- How can position bias create a recommendation feedback loop?
+- When is randomized exposure unethical or impractical, and what alternatives exist?
+- How would you distinguish changing user preferences from model-induced drift?
+:::
+</details>
+
 ## Project deep dives and failed experiments
+
+### Q: Walk me through an ML project you worked on and the impact it had. {#q-project-impact}
+
+**Short answer:** I would answer with one project I genuinely know end to end: the problem and why ML was appropriate, the data and baseline, the model and metric, the experiments and failures, my specific contribution, the final result and how we established it was real, the product or research impact, and what I would change now. I would use concrete numbers where I can defend them and never imply ownership I did not have.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+<p class="question-source"><small>Google MLE interview writeup · 2026</small></p>
+
+::: {.panel-tabset}
+#### Answer Framework
+
+1. **Problem:** Who needed what decision or capability, and what constraint mattered?
+2. **Why ML:** Why were rules, search, or a simpler product solution insufficient?
+3. **Data:** What examples and labels existed, and what were their limitations?
+4. **Baseline:** What simple reference made improvement measurable?
+5. **Model and metric:** What was chosen, why, and how did the metric connect to the goal?
+6. **Experiments:** What changed between candidates, and what evidence selected the winner?
+7. **Failures:** What did not work, and what did that teach the team?
+8. **Result and impact:** What moved, with uncertainty or guardrails where relevant?
+9. **Reflection:** What would you change with hindsight or different resources?
+
+#### Evidence and Impact
+
+Separate offline model improvement from downstream impact. State the comparison, data split or experiment, size of the change, uncertainty where relevant, and any guardrail regression. If the model was not launched, describe the validated research result without inventing product impact. If business numbers are confidential, use approved relative figures or a technically precise qualitative outcome.
+
+#### Ownership and Trade-offs
+
+Use “I” for your decisions and implementation and “we” for team outcomes. Be ready to explain one architecture choice against its alternatives, one important debugging episode, and one compromise among quality, latency, data, or maintainability. A credible failure and correction often demonstrates more judgment than a list of successful model names.
+
+#### Follow-ups
+
+- Why this architecture, and what simpler baseline did you beat?
+- What was your personal contribution?
+- What failed, and how did you diagnose it?
+- Why was that the right metric, and how did you know the gain was real?
+- What would you do with \(10\times\) more data?
+- What would you do with \(10\times\) more compute?
+:::
+</details>

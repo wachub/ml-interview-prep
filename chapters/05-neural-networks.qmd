@@ -14,4 +14,6 @@ This chapter will build the vocabulary to explain how networks learn useful repr
 
 ## Convolutional neural network intuition
 
-## Sequence-model intuition
+## Sequence-model intuition {#sec-rnn-throughput}
+
+An RNN computes each hidden state from the previous hidden state, creating a sequential dependency across token positions. This limits parallelism within one sequence and is an important constraint when reasoning about [inference throughput](10-ml-system-reasoning.qmd#q-inference-throughput); batching can parallelize across sequences, but it does not remove the recurrent dependency within each sequence.

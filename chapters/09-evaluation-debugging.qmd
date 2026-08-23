@@ -14,6 +14,62 @@ This chapter will turn model symptoms into a disciplined sequence of checks, hyp
 
 ## Debugging training and data
 
+### Q: A bad training batch or corrupted model has entered your ML pipeline. How would you detect, contain, and recover from it? {#q-corrupt-pipeline}
+
+**Short answer:** I would detect the incident through validation failures or anomalous data, loss, gradient, and serving metrics; immediately stop promotion and quarantine the suspect data and artifacts; then use lineage and controlled comparisons to isolate whether the fault is in data, model code or state, or infrastructure. I would roll back to the last known-good model, verify its inputs and checkpoint, retrain reproducibly from clean versioned data if needed, and add validation gates, canaries, and monitoring to prevent recurrence.
+
+::: {.question-source}
+Google MLE interview writeup · 2026
+:::
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Detection
+
+Detect corruption as early as possible and at more than one layer:
+
+- **Inputs:** enforce schemas, ranges, required fields, cardinality constraints, and label checks; compare feature and label distributions with a known-good window.
+- **Training:** alert on NaNs or infinities, sudden loss jumps, stalled learning, exploding or vanishing gradient norms, and unexpected parameter or activation statistics.
+- **Evaluation and serving:** watch for regressions in overall and slice metrics, score-distribution shifts, calibration changes, and abnormal latency or error rates.
+
+A single alert is evidence of a symptom, not yet a diagnosis. Preserve the offending batch, logs, configuration, code version, environment, and random seeds before investigating.
+
+#### Containment & Diagnosis
+
+First stop the suspect run and block artifact promotion. Quarantine the batch and model rather than deleting them, pause downstream retraining if contamination may propagate, and keep serving the last known-good artifact.
+
+Then isolate one layer at a time:
+
+1. **Data:** run the previous training code and model configuration on the suspect batch, and the current run on a known-good batch. Check schemas, preprocessing outputs, labels, joins, sampling, and time boundaries.
+2. **Model:** compare code, configuration, dependencies, initialization, and checkpoint checksums with the known-good run. Attempt to load and evaluate the checkpoint in a clean environment.
+3. **Infrastructure:** examine worker failures, storage integrity, nondeterministic kernels, accelerator or numerical errors, and partial checkpoint writes.
+
+Changing one factor per comparison helps distinguish a bad batch from bad model state or a broken execution environment.
+
+#### Recovery
+
+Roll back serving and promotion metadata to a tested, known-good artifact. Confirm that its preprocessing contract, feature versions, and dependencies still match production before restoring traffic.
+
+If retraining is required, use an immutable clean dataset version, reproducible preprocessing and environment definitions, and a verified checkpoint or clean initialization. Run the full validation suite, compare against the known-good baseline on important slices, and deploy gradually. Dataset versions, checkpoint hashes, code revisions, configurations, and deployment history should be linked through model lineage so the recovered system is auditable.
+
+#### Prevention
+
+- Put schema, distribution, leakage, label-quality, and finite-value checks before training, with explicit pass/fail promotion gates afterward.
+- Store datasets, preprocessing code, configurations, and model artifacts as immutable, versioned objects with checksums and lineage.
+- Require reproducible runs and evaluate every candidate against a known-good baseline and critical slices.
+- Canary new pipelines and models on limited data or traffic before full rollout, with automatic rollback criteria.
+- Monitor training health, feature distributions, predictions, online outcomes, and infrastructure continuously; rehearse rollback and recovery paths.
+
+#### Follow-ups
+
+- **How would you distinguish corrupted data from a model bug?** Replay a known-good model or training revision on the suspect data and the suspect revision on known-good data, holding the rest of the pipeline fixed.
+- **What if the bad model was already deployed?** Stop or reduce traffic to it, roll back to the compatible known-good artifact, assess affected predictions and downstream data, and only restore traffic after validation and a canary.
+- **When is resuming from a checkpoint unsafe?** When the checkpoint may contain corrupted optimizer state or weights, was written incompletely, or was trained on contaminated data; restart from the last verified checkpoint or from clean initialization.
+- **How do you prevent the incident from contaminating future training?** Track exposure and lineage, quarantine affected examples and labels, rebuild training data from a clean cutoff when necessary, and do not treat suspect model outputs as ground truth.
+:::
+</details>
+
 ## Diagnosing model failures
 
 Planned scenarios include diverging validation loss, NaN loss, one-class predictions, offline/production disagreement, and performance that falls after adding data.
