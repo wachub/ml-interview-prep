@@ -91,14 +91,18 @@ If you inspect the “test” score and then change the model, those examples ar
 
 ### Q: Why do we need a validation set? Why not train on one set and evaluate on the test set? {#q-why-validation-set .qa-card}
 
-**Short answer:** Model development itself involves choices. If test performance guides hyperparameters, architecture, features, thresholds, or stopping time, we optimize against the test sample and bias its reported performance upward. Validation data absorbs that adaptive selection so the final test set can remain untouched.
+**Short answer:** Validation is needed for model selection, not because machine learning intrinsically requires three physical datasets. If the entire learning procedure is fixed before test evaluation, training once and testing once is valid. In real development, held-out feedback guides adaptive choices, so we use validation data and preserve the test set for final evaluation.
 
 <details><summary><strong>Expand explanation</strong></summary>
 
 ::: {.panel-tabset}
 #### Intuition
 
-Every time we inspect a held-out result and change something because of it, information from that dataset enters development. Even without computing gradients on those examples, the process adapts to them.
+A separate validation set is not mathematically mandatory. If architecture, preprocessing, optimizer, regularization strength, feature choices, epoch count, threshold, and checkpoint-selection rule are all fixed before any test result is inspected, we can train on the training data and evaluate exactly once on an independent test set.
+
+Real ML development is rarely that fixed. We compare architectures and hyperparameters, adjust regularization, choose stopping times and thresholds, inspect errors, and revise the pipeline. Every time a held-out result guides one of those choices, information from that sample enters development—even if its examples never contribute gradients. That sample is functioning as validation data.
+
+> Validation is needed for model selection, not because machine learning intrinsically requires three physical datasets.
 
 The effective learning algorithm includes both
 
@@ -112,12 +116,17 @@ The validation set lets us perform this selection without consuming the final au
 
 #### Example
 
-Choosing a network depth, regularization strength, probability threshold, and epoch from test performance would make the test score an estimate of the best of many test-guided attempts—not an independent estimate of the chosen pipeline.
+**Fixed procedure:** Specify every modeling and checkpoint decision in advance, train once, and evaluate once on an independent test set. No validation split is logically required.
+
+**Adaptive procedure:** Compare network depths, regularization strengths, thresholds, or epochs using held-out performance. Those examples now serve as validation data, so a separate untouched test set is needed for the final estimate.
+
+After selecting and freezing the complete procedure, we may retrain it on the combined training and validation data before evaluating on the untouched test set. Any data-dependent preprocessing and training rule must also be frozen; if the final procedure still needs early-stopping feedback, retain an appropriate stopping split or use a previously fixed epoch. The test result must not trigger another round of selection.
 
 #### Follow-ups
 
 - Does ordinary validation update weights directly? No; it usually compares fitted candidates or checkpoints.
 - Can cross-validation replace a fixed validation set? Sometimes, especially with limited data, but it still supports model selection rather than final evaluation.
+- Must training and validation remain permanently separate? No. They can be combined for a final refit after the procedure is frozen, provided the test set remains untouched.
 :::
 </details>
 
@@ -144,7 +153,7 @@ The issue is information flow, not the size of the code change. A “tiny” cha
 
 ### Q: Can you overfit even if you never train directly on the validation set? {#q-validation-overfitting .qa-card}
 
-**Short answer:** Yes. Repeatedly choosing models by validation performance can select one that looked unusually good because of random validation noise. Its parameters were not fit on validation examples, but the model-selection process was.
+**Short answer:** Yes. Repeatedly choosing models by validation performance can select one that looked unusually good because of sampling noise. Its parameters were not fit on validation examples, but the model-selection process was. More validation data reduces that noise; more adaptive comparisons create more opportunities to select favorable noise.
 
 <details><summary><strong>Expand explanation</strong></summary>
 
@@ -188,13 +197,108 @@ $$
 
 The expression on the right is a leading-order illustration, not something to memorize. Scores measured on the same validation set are usually correlated, so $M$ is not generally the number of independent comparisons. The conceptual point remains: trying more configurations raises the chance of finding one that looks unusually good by luck. For a loss that is minimized, the same optimism appears in the opposite direction—as an unusually low observed loss.
 
+#### Validation-Set Size
+
+For a fixed model evaluated on $n_{\text{val}}$ independent examples, suppose accuracy has true value $p$. Write each correctness indicator as
+
+$$
+Z_i\sim\operatorname{Bernoulli}(p),
+$$
+
+so validation accuracy is
+
+$$
+\hat p
+=
+\frac{1}{n_{\text{val}}}
+\sum_{i=1}^{n_{\text{val}}} Z_i.
+$$
+
+Then
+
+$$
+E[\hat p]=p,
+$$
+
+and
+
+$$
+\operatorname{Var}(\hat p)
+=
+\frac{p(1-p)}{n_{\text{val}}},
+$$
+
+giving standard error
+
+$$
+\operatorname{SE}(\hat p)
+=
+\sqrt{
+\frac{p(1-p)}
+{n_{\text{val}}}
+}.
+$$
+
+These equations describe sampling uncertainty for one fixed model chosen independently of these outcomes. After adaptive model selection, the winner's reported validation accuracy is not an unbiased final estimate even though each fixed candidate's accuracy estimate may be unbiased before selection.
+
+Thus, under this simple sampling model,
+
+$$
+n_{\text{val}}\uparrow
+\quad\Longrightarrow\quad
+\text{evaluation noise}\downarrow.
+$$
+
+Combining this standard-error scale with the equal-model, independent-Gaussian illustration gives the **heuristic**, not generally exact, scale
+
+$$
+\text{selection optimism}
+\sim
+\sqrt{
+\frac{p(1-p)}
+{n_{\text{val}}}
+}
+\sqrt{2\log M}.
+$$
+
+This multiplication is only intuition. Candidate scores are correlated because they use the same validation examples; candidates may have different true performance; metrics other than accuracy have different sampling distributions; and adaptive search is more complicated than choosing once among $M$ independent, fixed candidates.
+
+#### How Large?
+
+There is no universal validation percentage. The needed size depends on the precision required, variability of the metric, number and balance of examples, number of model comparisons, correlation among those comparisons, and precision required for important subgroup or slice estimates. Grouped or dependent observations also reduce the effective information relative to an iid sample of the same nominal size.
+
+For accuracy, the worst-case Bernoulli bound
+
+$$
+p(1-p)\leq\frac14
+$$
+
+implies
+
+$$
+\operatorname{SE}(\hat p)
+\leq
+\frac{1}{2\sqrt{n_{\text{val}}}}.
+$$
+
+This gives only scale intuition:
+
+| Validation examples | Worst-case accuracy SE |
+|---:|---:|
+| $100$ | about 5 percentage points |
+| $1{,}000$ | about 1.6 percentage points |
+| $10{,}000$ | about 0.5 percentage points |
+
+These are one-standard-error scales, not approximate 95% margins of error or a rule for choosing split size. Rare-class and slice metrics may need far more examples even when overall accuracy appears precise.
+
 #### Mitigation
 
 Limit unnecessary adaptive search, track all trials, compare meaningful effect sizes, repeat key results across seeds or folds, and reserve a fresh holdout for important claims. Nested cross-validation can help when data are limited and computation permits.
 
 #### Follow-ups
 
-- Does a larger validation set help? Yes; it reduces sampling noise, but does not eliminate adaptive selection.
+- **How large does the validation set need to be?** Large enough to resolve practically meaningful metric and slice differences at the intended search breadth; estimate uncertainty rather than relying on a universal percentage.
+- **Does a larger validation set eliminate selection bias?** No. It reduces sampling noise, but it does not make unlimited adaptive reuse safe.
 - Is this the same as training on validation gradients? No. The information enters through selection rather than parameter-gradient updates.
 :::
 </details>
@@ -415,7 +519,7 @@ Merely evaluating $\hat\beta_{\text{OLS}}$ on an additional validation set chang
 Ridge regression solves
 
 $$
-\hat\beta_{\text{ridge}}
+\hat\beta_\lambda
 =\arg\min_\beta
 \left[
 \lVert y-X\beta\rVert_2^2
@@ -426,7 +530,7 @@ $$
 with solution
 
 $$
-\hat\beta_{\text{ridge}}
+\hat\beta_\lambda
 =(X^\top X+\lambda I)^{-1}X^\top y.
 $$
 
@@ -440,7 +544,7 @@ Regularization has changed the estimator itself. In practice, features are usual
 
 The roles form three distinct levels:
 
-**Inner problem—fit parameters on training data:**
+**1. Parameter fitting—fit parameters on training data:**
 
 $$
 \hat\beta_\lambda
@@ -450,7 +554,7 @@ L_{\text{train}}(\beta)+\lambda R(\beta)
 \right].
 $$
 
-**Outer problem—select the hyperparameter on validation data:**
+**2. Hyperparameter selection—select $\lambda$ on validation data:**
 
 $$
 \lambda^*
@@ -458,17 +562,17 @@ $$
 L_{\text{val}}(\hat\beta_\lambda).
 $$
 
-**Final evaluation—estimate performance after selection is frozen:**
+**3. Final evaluation—estimate performance after selection is frozen:**
 
 $$
 L_{\text{test}}(\hat\beta_{\lambda^*}).
 $$
 
-Training and regularization determine each fitted candidate; validation selects among candidates; testing evaluates the selected procedure.
+> The regularizer determines what each estimator is; the validation set chooses among estimators; testing evaluates the frozen selection.
 
 #### Follow-ups
 
-- Must regularization be an explicit penalty? No. Constraints, augmentation, dropout, and early stopping can also change the learning procedure.
+- Must regularization be an explicit penalty? No; see [how different model families control effective complexity](#q-explicit-regularization).
 - What chooses $\lambda$? Usually validation performance over a prespecified or carefully managed search.
 :::
 </details>
@@ -497,6 +601,115 @@ E_{\mathcal D,\varepsilon}
 $$
 
 Increasing regularization often makes bias rise while variance falls. Test error improves when the variance reduction is larger than the increase in squared bias. See the [full bias–variance derivation](#q-bias-variance) for the precise expectations and assumptions.
+
+#### Ridge Example
+
+[Chapter 4 gives the full eigenvalue view of ridge stabilization](04-core-ml-models.qmd#q-handle-multicollinearity). Here we specialize one eigen-direction to compare conditional coefficient-estimation MSE without repeating that derivation.
+
+Assume the fixed-design linear model with zero-mean homoskedastic noise, and write
+
+$$
+X^\top X=QDQ^\top,
+\qquad
+D=\operatorname{diag}(d_1,\ldots,d_p).
+$$
+
+Consider one eigen-direction with eigenvalue $d>0$, and let the true coefficient in that direction be $\beta$. The following is coefficient-estimation MSE conditional on $X$, not a full prediction- or test-error formula. Its contribution to predictive risk also depends on how deployment inputs vary along this direction; predicting fresh outcomes additionally includes irreducible noise.
+
+For OLS,
+
+$$
+\hat\beta_{\text{OLS}}
+=
+\beta+\text{noise},
+$$
+
+with
+
+$$
+E[\hat\beta_{\text{OLS}}]=\beta
+$$
+
+and
+
+$$
+\operatorname{Var}(\hat\beta_{\text{OLS}})
+=
+\frac{\sigma^2}{d}.
+$$
+
+Because OLS is unbiased in this setting,
+
+$$
+\operatorname{MSE}_{\text{OLS}}
+=
+\frac{\sigma^2}{d}.
+$$
+
+Ridge shrinks the direction by $d/(d+\lambda)$, so
+
+$$
+E[\hat\beta_\lambda]
+=
+\frac{d}{d+\lambda}\beta.
+$$
+
+Its bias and squared bias are
+
+$$
+\operatorname{Bias}(\hat\beta_\lambda)
+=
+-\frac{\lambda}{d+\lambda}\beta,
+$$
+
+and
+
+$$
+\operatorname{Bias}(\hat\beta_\lambda)^2
+=
+\frac{\lambda^2\beta^2}
+{(d+\lambda)^2}.
+$$
+
+Its variance is
+
+$$
+\operatorname{Var}(\hat\beta_\lambda)
+=
+\frac{\sigma^2d}
+{(d+\lambda)^2}.
+$$
+
+Therefore,
+
+$$
+\boxed{
+\operatorname{MSE}_{\text{ridge}}
+=
+\frac{
+\lambda^2\beta^2+\sigma^2d
+}
+{(d+\lambda)^2}
+}.
+$$
+
+Compare this directly with
+
+$$
+\operatorname{MSE}_{\text{OLS}}
+=
+\frac{\sigma^2}{d}.
+$$
+
+The formula makes the tradeoff concrete. Ridge often has more opportunity to help when $d$ is small, label noise $\sigma^2$ is large, $|\beta|$ is small relative to the noise, or data are limited relative to effective dimensionality. It tends to help less when $d$ is large, signal-to-noise ratio is high, the coefficient is strongly identified, or informative data already make estimator variance small.
+
+These are tendencies, not guarantees: the result depends on $\lambda$, the true signal, the design, and the prediction target. Ridge improves this directional coefficient-estimation MSE only when its variance reduction exceeds its added squared bias:
+
+$$
+\text{bias}\uparrow
+\qquad\text{versus}\qquad
+\text{variance}\downarrow.
+$$
 
 #### When It Is Too Strong
 
@@ -534,6 +747,43 @@ Architecture size is only one form of capacity control. Regularization can encod
 #### Common Mistakes
 
 Trying a huge collection of unregularized models does not make selection free: [validation noise and winner's curse](#q-validation-overfitting) limit how many adaptive comparisons we can trust.
+:::
+</details>
+
+### Q: Does every machine-learning model need explicit regularization? {#q-explicit-regularization .qa-card}
+
+**Short answer:** No. Every learning procedure needs enough control of effective complexity to generalize, but that control need not be an explicit penalty such as L1 or L2. It can come from architecture, model hyperparameters, averaging, priors, augmentation, early stopping, optimization dynamics, or simply enough representative data.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+The broader principle is [inductive bias](#q-inductive-bias) and [effective-capacity control](#q-model-capacity), not “always add a penalty to the loss.” A learning procedure includes the model class, data, optimization, stopping rule, and selection process. Each can restrict which fitted functions are likely or preferred.
+
+Explicit regularization is useful when it encodes an appropriate preference or improves stability, but it is not a ritual. Whether more control is needed should follow from the model family, data regime, train–validation behavior, and deployment objective.
+
+#### Model Examples
+
+| Model family | Important forms of complexity control or regularization |
+|---|---|
+| Linear / logistic regression | L1, L2, elastic net |
+| Neural networks | weight decay, augmentation, early stopping, dropout, architecture, optimization bias |
+| Decision trees | maximum depth, minimum leaf size, pruning |
+| Random Forest | averaging, tree and feature subsampling, leaf and depth controls |
+| Gradient boosting | learning rate, number of trees, depth, subsampling, explicit penalties |
+| SVM | $C$ and margin control |
+| k-NN | $k$ as a smoothing and complexity parameter |
+| Bayesian models | priors |
+| Low-rank / PCA-style models | rank or dimensionality constraint |
+
+#### Follow-ups
+
+- **Does more data reduce the need for regularization?** Often: representative data can reduce estimator variance and support a more flexible model. It does not eliminate problems such as noise, leakage, shift, or invalid inductive biases.
+- **Is [early stopping](#q-stop-training) really regularization?** Yes. It restricts which point on the optimization path is returned, even though it does not add a penalty term.
+- **Is [data augmentation](#q-augmentation) a regularizer?** Yes, when it encodes valid invariances by making the learner fit multiple plausible versions of an example.
+- **Is Random Forest regularized without an L2 penalty?** In the broader sense, yes. Averaging, feature and row subsampling, depth, and leaf-size controls constrain its effective behavior and reduce variance.
+- **Can an overparameterized neural network generalize without strong explicit penalties?** Yes. Architecture, optimization bias, data scale, augmentation, and stopping can favor generalizing solutions, but parameter count alone provides no guarantee.
 :::
 </details>
 
