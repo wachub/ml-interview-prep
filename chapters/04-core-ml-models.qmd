@@ -4,11 +4,2026 @@ This chapter is a compact comparison map for classical models: their assumptions
 
 ## Linear and logistic regression
 
+### Q: What is multicollinearity? {#q-multicollinearity}
+
+**Short answer:** Multicollinearity occurs when one or more predictor variables are approximately linear combinations of others. In linear regression this makes the coefficients poorly identified: predictions may remain reasonable, while individual coefficient estimates can become highly unstable.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Suppose two predictors satisfy
+
+$$
+x_2 \approx 2x_1.
+$$
+
+Then a linear model produces
+
+$$
+\hat y
+=\beta_0+\beta_1x_1+\beta_2x_2
+\approx \beta_0+(\beta_1+2\beta_2)x_1.
+$$
+
+The data may identify the combined effect $\beta_1+2\beta_2$, but provide little information about how that effect should be divided between the two coefficients. If the dependence were exact, replacing $(\beta_1,\beta_2)$ by $(\beta_1+2c,\beta_2-c)$ would leave every fitted value unchanged.
+
+This is why different samples can produce very different coefficients—even opposite signs—while producing nearly identical predictions.
+
+#### Mathematical View
+
+For the linear model
+
+$$
+y=X\beta+\varepsilon,
+$$
+
+ordinary least squares gives
+
+$$
+\hat\beta=(X^\top X)^{-1}X^\top y
+$$
+
+when $X$ has full column rank. Exact linear dependence makes $X^\top X$ singular, so coefficients are not unique. Approximate dependence makes it ill-conditioned, so inversion magnifies small changes in the sample or labels.
+
+Under the classical assumptions
+
+$$
+E[\varepsilon\mid X]=0,
+\qquad
+\operatorname{Var}(\varepsilon\mid X)=\sigma^2I,
+$$
+
+the coefficient covariance is
+
+$$
+\operatorname{Var}(\hat\beta\mid X)
+=\sigma^2(X^\top X)^{-1}.
+$$
+
+If
+
+$$
+X^\top X=Q\operatorname{diag}(d_1,\ldots,d_p)Q^\top,
+$$
+
+then the variance in eigenvector direction $q_k$ is $\sigma^2/d_k$. A small eigenvalue therefore creates a weakly identified, high-variance coefficient direction.
+
+The spectral condition number is
+
+$$
+\kappa_2(X^\top X)
+=\frac{d_{\max}}{d_{\min}}
+=\left(\frac{s_{\max}(X)}{s_{\min}(X)}\right)^2.
+$$
+
+A large condition number means some directions are much less identified than others, so perturbations can be strongly amplified. Put columns on comparable scales before interpreting it.
+
+#### Common Mistakes
+
+- Multicollinearity does not automatically imply poor predictions.
+- A large pairwise correlation is one possible symptom, not the definition; dependence can involve several variables.
+- Unstable coefficients do not by themselves show that a feature has no predictive value.
+- Scaling makes a condition number interpretable but cannot remove a genuine linear dependence.
+:::
+</details>
+
+### Q: Why does multicollinearity increase the variance of regression coefficients? {#q-multicollinearity-coefficient-variance}
+
+**Short answer:** When predictors are nearly linearly dependent, $X^\top X$ has very small eigenvalues. Its inverse therefore has very large eigenvalues in those directions, and because $\operatorname{Var}(\hat\beta\mid X)=\sigma^2(X^\top X)^{-1}$, small changes in the data can produce large changes in the estimated coefficients.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Math
+
+Assume
+
+$$
+y=X\beta+\varepsilon,
+\qquad
+E[\varepsilon\mid X]=0,
+\qquad
+\operatorname{Var}(\varepsilon\mid X)=\sigma^2I,
+$$
+
+and that $X$ has full column rank. Substituting into the OLS estimator gives
+
+$$
+\begin{aligned}
+\hat\beta
+&=(X^\top X)^{-1}X^\top(X\beta+\varepsilon)\\
+&=\beta+(X^\top X)^{-1}X^\top\varepsilon.
+\end{aligned}
+$$
+
+Thus $E[\hat\beta\mid X]=\beta$, and
+
+$$
+\begin{aligned}
+\operatorname{Var}(\hat\beta\mid X)
+&=(X^\top X)^{-1}X^\top
+\operatorname{Var}(\varepsilon\mid X)
+X(X^\top X)^{-1}\\
+&=\sigma^2(X^\top X)^{-1}.
+\end{aligned}
+$$
+
+Now let
+
+$$
+X^\top X=QDQ^\top,
+\qquad
+D=\operatorname{diag}(d_1,\ldots,d_p).
+$$
+
+For an eigenvector $q_k$,
+
+$$
+\operatorname{Var}(q_k^\top\hat\beta\mid X)
+=\frac{\sigma^2}{d_k}.
+$$
+
+Near-collinearity means some nonzero $q_k$ satisfies $Xq_k\approx0$, so
+
+$$
+d_k=q_k^\top X^\top Xq_k=\lVert Xq_k\rVert_2^2
+$$
+
+is small. The data barely constrain movement in that coefficient direction. For an individual coefficient,
+
+$$
+\operatorname{Var}(\hat\beta_j\mid X)
+=\sigma^2\sum_{k=1}^p\frac{q_{jk}^2}{d_k},
+$$
+
+so the small eigenvalue most strongly destabilizes coefficients whose coordinate axes overlap with its eigenvector.
+
+#### Bias–Variance Connection
+
+Under these assumptions, OLS remains conditionally unbiased; multicollinearity primarily raises variance rather than introducing bias. This is a concrete instance of the variance term in the [bias–variance decomposition](02-generalization-regularization.qmd#q-bias-variance).
+
+The formulas condition on the observed design $X$ and vary the outcome noise, whereas the general learning-theory decomposition usually varies the entire training dataset. Both capture the same practical issue: a weakly identified learning procedure can change substantially when its sample changes. Ridge deliberately introduces bias to reduce this variance.
+
+#### Follow-ups
+
+- Which coefficient combinations become unstable? Those aligned with small-eigenvalue directions of $X^\top X$.
+- Can more observations help? Yes if they add information in the weak direction; repeating the same exact feature relationship cannot restore identifiability.
+- Why can coefficient signs change across bootstrap samples? Several allocations of a shared effect fit nearly equally well, so sampling noise can move the solution substantially along the weak direction.
+:::
+</details>
+
+### Q: Does multicollinearity necessarily hurt prediction accuracy? {#q-multicollinearity-prediction}
+
+**Short answer:** No. Multicollinearity can make individual coefficients unstable while predictions remain accurate, especially when test data preserve the same feature relationships as training data. It becomes more dangerous under distribution shift, extrapolation, small samples, or sufficiently large estimation variance.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+If $x_2\approx2x_1$, the data mostly need the model to estimate the combined effect $\beta_1+2\beta_2$. They may contain little evidence about the individual coefficients, but many coefficient pairs can still produce nearly the same fitted values.
+
+With exact dependence, OLS coefficients are not unique, yet the projection of $y$ onto the column space of $X$—and therefore the training fitted values—is unique. Near dependence gives the approximate version of this result.
+
+#### Mathematical View
+
+For a new feature vector $x_*$, the estimated conditional mean is
+
+$$
+\hat y_*=x_*^\top\hat\beta.
+$$
+
+Under the classical OLS assumptions,
+
+$$
+\operatorname{Var}(\hat y_*\mid X,x_*)
+=\sigma^2x_*^\top(X^\top X)^{-1}x_*.
+$$
+
+Using $X^\top X=Q\operatorname{diag}(d_1,\ldots,d_p)Q^\top$,
+
+$$
+\operatorname{Var}(\hat y_*\mid X,x_*)
+=\sigma^2\sum_{k=1}^p
+\frac{(q_k^\top x_*)^2}{d_k}.
+$$
+
+A small $d_k$ creates high predictive variance only when $x_*$ has a component in the corresponding weakly identified direction. If deployment examples preserve the training relationship, they may have little component there, so prediction remains stable even though $\hat\beta$ is unstable. Predicting a fresh observed outcome rather than its conditional mean adds irreducible noise under this model.
+
+#### When Prediction Suffers
+
+- **Correlation structure shifts:** training had $x_2\approx2x_1$, but deployment does not.
+- **The model must extrapolate:** new points expose coefficient directions that training barely constrained.
+- **The sample is small or noisy:** weak directions have still higher uncertainty.
+- **Several directions are poorly identified:** uncertainty affects more of the deployment feature space.
+- **Feature availability changes:** losing one member of a redundant group can expose an unstable coefficient allocation.
+
+#### Common Mistakes
+
+Do not remove a variable solely because it is correlated with another. For prediction, compare validated performance, stability under plausible shifts, and operational feature availability. For coefficient interpretation or causal estimation, weak identification is a more direct concern.
+:::
+</details>
+
+### Q: How would you detect multicollinearity? {#q-detect-multicollinearity}
+
+**Short answer:** I would combine domain inspection with pairwise correlations, per-feature VIFs, and singular values or a condition number computed after appropriate scaling. Correlations find simple pairs, VIF detects whether one feature is explained by all the others, and the SVD directly reveals weak directions in the full design matrix.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Correlation Matrix
+
+A correlation matrix is a fast first diagnostic for strongly related pairs, but it cannot detect every multivariable dependence. For example, let $x_1$ and $x_2$ be independent standardized variables and define
+
+$$
+x_3=\frac{x_1+x_2}{\sqrt{2}}+\text{small noise}.
+$$
+
+Then $x_3$ is nearly determined by $x_1$ and $x_2$, but its pairwise correlations with them are only about $1/\sqrt{2}\approx0.71$. A rule that flags only correlations above $0.9$ would miss the dependence.
+
+#### Variance Inflation Factor
+
+Regress feature $x_j$ on all the other predictors and obtain $R_j^2$. Its variance inflation factor is
+
+$$
+\operatorname{VIF}_j=\frac{1}{1-R_j^2}.
+$$
+
+If the remaining predictors explain almost all variation in $x_j$, then $R_j^2$ is close to one and little residual variation remains for estimating the unique contribution of $x_j$.
+
+Warnings such as $\operatorname{VIF}>5$ or $\operatorname{VIF}>10$ are heuristics, not mathematical decision boundaries. Their importance depends on sample size, noise, and whether the task values coefficient interpretation or prediction.
+
+#### VIF Math
+
+Assume the predictors are centered and the model includes an intercept. Let
+
+$$
+\operatorname{SST}_j
+=\sum_{i=1}^n(x_{ij}-\bar x_j)^2.
+$$
+
+Regressing $x_j$ on the other predictors leaves residual sum of squares
+
+$$
+\operatorname{SSE}_j
+=(1-R_j^2)\operatorname{SST}_j.
+$$
+
+Only this residualized part of $x_j$ identifies $\beta_j$. Under homoskedastic errors,
+
+$$
+\operatorname{Var}(\hat\beta_j\mid X)
+=
+\frac{\sigma^2}
+{(1-R_j^2)\sum_i(x_{ij}-\bar x_j)^2}.
+$$
+
+Without linear association with the other centered predictors, the variance would be $\sigma^2/\operatorname{SST}_j$. Their ratio is exactly $1/(1-R_j^2)$, which explains the name VIF.
+
+#### Singular Values and Condition Number
+
+For a centered and appropriately scaled design matrix,
+
+$$
+X=USV^\top,
+\qquad
+S=\operatorname{diag}(s_1,\ldots,s_p).
+$$
+
+A very small singular value means some feature combination $v_k$ satisfies $Xv_k\approx0$. Useful global diagnostics are
+
+$$
+\kappa_2(X)=\frac{s_{\max}}{s_{\min}}
+$$
+
+and
+
+$$
+\kappa_2(X^\top X)=\frac{s_{\max}^2}{s_{\min}^2}.
+$$
+
+The corresponding right singular vector identifies the weak combination; an exact zero singular value indicates rank deficiency. Standardize comparable numeric predictors and handle the intercept separately because different units alone can create a large condition number.
+
+#### Practical Workflow
+
+1. Check duplicated columns, deterministic transformations, one-hot encodings, and the dummy-variable trap.
+2. Inspect correlations for obvious redundancy.
+3. Use VIF when individual coefficient interpretation matters.
+4. Use the SVD or condition number for higher-order dependencies.
+5. Refit across folds or bootstrap samples to inspect coefficient stability.
+6. Decide whether the instability matters for the actual objective; a diagnostic is not an automatic instruction to delete a feature.
+:::
+</details>
+
+### Q: What would you do if you discover multicollinearity? {#q-handle-multicollinearity}
+
+**Short answer:** I would first decide whether the goal is prediction, coefficient interpretation, or causal estimation. I might remove or combine genuinely redundant variables, collect data with more independent variation, use PCA, or apply ridge regression for stability. I would not automatically delete correlated features when validated prediction is already reliable.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Decision Framework
+
+- **Prediction:** keep useful correlated features if held-out performance and plausible-shift tests are stable; ridge is often a strong default.
+- **Coefficient interpretation:** decide which effects must be separated, then use domain knowledge to remove, combine, or redesign measurements.
+- **Causal estimation:** do not drop a correlated confounder merely to reduce VIF; the estimand and identification assumptions determine the adjustment set.
+- **Accidental dependence:** fix duplicated features, deterministic transformations, encoding errors, or leakage in the data pipeline.
+
+#### Remedies
+
+- **Remove a redundant variable** when two features encode essentially the same information and one is cheaper, noisier, less available, or less interpretable.
+- **Combine variables** when a domain-motivated aggregate is more meaningful than separate coefficients.
+- **Use PCA or dimensionality reduction** to replace correlated features with orthogonal components. This can stabilize estimation but weakens interpretation, and PCA does not use $y$ when choosing directions.
+- **Collect more informative data** that varies the correlated features independently. More rows with the same exact dependence do not restore identifiability.
+- **Use ridge regression** to shrink weakly identified directions.
+- **Use domain-driven feature choice** rather than deleting variables solely because a numerical threshold was crossed.
+
+#### Ridge Math
+
+After centering the predictors and response so that $\beta$ contains only slope coefficients, ridge solves
+
+$$
+\hat\beta_{\text{ridge}}
+=
+\arg\min_\beta
+\left\{
+\lVert y-X\beta\rVert_2^2
++\lambda\lVert\beta\rVert_2^2
+\right\},
+$$
+
+giving
+
+$$
+\hat\beta_{\text{ridge}}
+=(X^\top X+\lambda I)^{-1}X^\top y.
+$$
+
+Predictors are usually standardized. If an intercept is fitted explicitly, it is handled separately and is usually not penalized. If
+
+$$
+X^\top X
+=Q\operatorname{diag}(d_1,\ldots,d_p)Q^\top,
+$$
+
+then ridge shifts every penalized eigenvalue from $d_i$ to $d_i+\lambda$. Its inverse uses $1/(d_i+\lambda)$ instead of $1/d_i$, preventing extremely small-eigenvalue directions from exploding.
+
+Under
+
+$$
+y=X\beta+\varepsilon,
+\qquad
+E[\varepsilon\mid X]=0,
+\qquad
+\operatorname{Var}(\varepsilon\mid X)=\sigma^2I,
+$$
+
+$$
+E[\hat\beta_{\text{ridge}}\mid X]
+=
+Q\operatorname{diag}\left(
+\frac{d_i}{d_i+\lambda}
+\right)Q^\top\beta,
+$$
+
+so ridge introduces bias. Its covariance is
+
+$$
+\operatorname{Var}(\hat\beta_{\text{ridge}}\mid X)
+=
+\sigma^2Q\operatorname{diag}\left(
+\frac{d_i}{(d_i+\lambda)^2}
+\right)Q^\top.
+$$
+
+Compared with the OLS directional variance $\sigma^2/d_i$, ridge can greatly reduce variance when $d_i$ is small. This is the mathematical bias–variance trade-off behind its stability. See also [L2 regularization and weight decay](02-generalization-regularization.qmd#q-weight-decay).
+
+#### LASSO and Correlated Predictors
+
+LASSO can produce a sparse model, but among predictors carrying similar information it may select one somewhat arbitrarily. Small sample changes can therefore change which feature is retained. That can be acceptable when sparsity is the operational objective, but it is not reliable evidence that the selected feature is uniquely important. Elastic net can be more stable because it combines L1 sparsity with L2 shrinkage.
+
+#### Follow-ups
+
+- Does ridge solve exact multicollinearity? For $\lambda>0$, it makes the penalized system invertible, but the estimator is biased and depends on the penalty.
+- How should $\lambda$ be selected? With validation or cross-validation using a metric and split structure that match deployment.
+- Does standardization fix multicollinearity? No; it removes scale artifacts and makes regularization comparable across features.
+- Should every feature with high VIF be removed? No; VIF measures coefficient-variance inflation, not predictive uselessness or causal irrelevance.
+- Can more data solve the problem? Only if the new data add information in the weak directions.
+:::
+</details>
+
 ## Regularized linear models
 
 ## Decision trees and random forests
 
 ## Bagging, boosting, and gradient boosting
+
+### Q: What is boosting? {#q-boosting}
+
+**Short answer:** Boosting builds a strong predictor by adding weak learners sequentially. Each new learner responds to errors made by the current ensemble—through reweighted examples, residuals, or loss gradients—and the final prediction combines all learners additively.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Think of each learner as making a targeted correction. The first learner captures an easy pattern; the next focuses on what remains wrong; later learners refine increasingly difficult regions. No single learner needs to represent the full decision boundary.
+
+#### Deep Dive
+
+A generic boosted model has the additive form
+
+$$
+F_M(x)=F_0(x)+\sum_{m=1}^{M}\alpha_m h_m(x),
+$$
+
+where:
+
+- $h_m(x)$ is the weak learner added at stage $m$;
+- $\alpha_m$ controls that learner's contribution;
+- $F_m(x)$ is the ensemble score after $m$ stages.
+
+For binary classification, a common prediction rule is
+
+$$
+H(x)=\operatorname{sign}(F_M(x)).
+$$
+
+For regression, $F_M(x)$ is usually used directly.
+
+“Focuses on errors” has different mathematical meanings in different algorithms:
+
+- **AdaBoost** increases the importance of examples that the latest learner misclassifies.
+- **Gradient boosting** fits the negative gradient of the current loss.
+- Under squared error, that negative gradient is the ordinary residual.
+
+The loss determines what counts as a useful correction. See the [loss-function selection question](01-probability-statistics.qmd#q-loss-selection).
+
+#### Example
+
+Suppose decision stumps are the weak learners. One stump may separate most positive examples using feature $x_1$, while another corrects a subset using $x_2$. Their weighted sum can form a much richer boundary than either stump alone.
+
+#### Common Mistakes
+
+- “Weak” means deliberately simple or only slightly predictive; it does not mean useless or random.
+- Boosting is not one fixed algorithm. AdaBoost, gradient boosting, and XGBoost are related but distinct methods.
+- Boosting does not guarantee better test performance. Noise, excessive capacity, or poor validation choices can still produce poor generalization.
+:::
+</details>
+
+### Q: Bagging vs boosting? {#q-bagging-vs-boosting}
+
+**Short answer:** Bagging fits perturbed versions of a base learner largely independently and averages their predictions, which primarily stabilizes a high-variance learner. Boosting fits learners sequentially, with each learner responding to the current ensemble's errors. Bagging is easier to parallelize and often more robust to noise; boosting can remove systematic error more aggressively but is usually more sensitive to data quality and tuning.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Comparison
+
+| Property | Bagging | Boosting |
+|---|---|---|
+| Training relationship | Learners are largely independent | Learners depend on the current ensemble |
+| Training variation | Bootstrap samples and often feature subsampling | Reweighted examples, residuals, or loss gradients |
+| Combination | Usually an unweighted or nearly uniform average/vote | Usually a learned, stagewise additive combination |
+| Typical effect | Primarily reduces variance by averaging unstable learners | Often reduces bias through iterative correction and can also affect variance |
+| Parallelism | Learners can usually be trained in parallel | Boosting rounds are inherently sequential |
+| Noise sensitivity | Averaging is often comparatively robust | Repeated focus on hard points can amplify label noise |
+| Canonical tree example | Random Forest | AdaBoost or gradient-boosted trees |
+
+#### Why the Difference Matters
+
+Averaging helps when individual learners fluctuate across training samples but their errors are not perfectly correlated. This is why bagging works especially well with deep, unstable decision trees.
+
+Boosting instead changes the next fitting problem based on the ensemble so far. That can correct patterns a single learner consistently misses, but it also means a mislabeled or extreme example may influence many later rounds.
+
+These are tendencies, not strict bias-versus-variance laws. Bagging can affect bias, and boosting can increase or decrease variance depending on base-learner complexity, shrinkage, data size, and stopping time. See the [bias–variance decomposition](02-generalization-regularization.qmd#q-bias-variance).
+
+#### Follow-ups
+
+- Why are decision trees particularly suitable for bagging?
+- Why is a Random Forest usually easier to train in parallel?
+- When would label noise make boosting unattractive?
+- How does XGBoost differ from a Random Forest?
+:::
+</details>
+
+### Q: How does AdaBoost work? {#q-adaboost-algorithm}
+
+**Short answer:** AdaBoost maintains a distribution of weights over the training examples. At each round it fits a weak classifier to minimize weighted error, gives that classifier a vote based on how much better it is than chance, and increases the relative weight of its mistakes. The final classifier is the sign of the weighted vote across all learners.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Algorithm
+
+Assume binary labels and weak-classifier outputs:
+
+$$
+y_i\in\{-1,+1\},
+\qquad
+h_m(x)\in\{-1,+1\}.
+$$
+
+Initialize normalized example weights:
+
+$$
+w_i^{(1)}=\frac{1}{n}.
+$$
+
+At iteration $m$:
+
+1. Fit $h_m$ using the current example weights.
+
+2. Compute its weighted error:
+
+$$
+\epsilon_m
+=
+\frac{
+\sum_{i=1}^{n}w_i^{(m)}
+\mathbf 1\!\left\{y_i\ne h_m(x_i)\right\}
+}{
+\sum_{i=1}^{n}w_i^{(m)}
+}.
+$$
+
+The denominator is one when the weights have already been normalized.
+
+3. Compute the learner's vote:
+
+$$
+\alpha_m
+=
+\frac{1}{2}
+\log\left(\frac{1-\epsilon_m}{\epsilon_m}\right).
+$$
+
+4. Update each example weight:
+
+$$
+\widetilde w_i^{(m+1)}
+=
+w_i^{(m)}
+\exp\left(-\alpha_m y_i h_m(x_i)\right),
+$$
+
+then normalize:
+
+$$
+w_i^{(m+1)}
+=
+\frac{\widetilde w_i^{(m+1)}}{Z_m},
+\qquad
+Z_m=\sum_{j=1}^{n}\widetilde w_j^{(m+1)}.
+$$
+
+After $M$ rounds, form the score and classifier
+
+$$
+F_M(x)=\sum_{m=1}^{M}\alpha_m h_m(x),
+\qquad
+H(x)=\operatorname{sign}(F_M(x)).
+$$
+
+#### Interpretation
+
+- $w_i^{(m)}$: how important example $i$ is when fitting round $m$;
+- $\epsilon_m$: the fraction of current weight the learner gets wrong;
+- $\alpha_m$: the learner's vote in the ensemble;
+- $y_i h_m(x_i)$: $+1$ for a correct prediction and $-1$ for a mistake;
+- $Z_m$: a common normalization constant that makes the new weights sum to one;
+- $F_M(x)$: a real-valued ensemble score whose sign gives the predicted class.
+
+The weights can be passed directly to a learner that supports weighted fitting. Another implementation may sample examples according to the weights.
+
+#### Example
+
+If a learner has weighted error $\epsilon_m=0.25$, then
+
+$$
+\alpha_m
+=
+\frac{1}{2}\log(3)
+\approx 0.549.
+$$
+
+A correct example is multiplied by $e^{-0.549}\approx 0.577$, while a misclassified example is multiplied by $e^{0.549}\approx 1.732$. Before normalization, the mistake therefore becomes three times as important relative to the correct example.
+
+#### Edge Cases
+
+- If $\epsilon_m<0.5$, then $\alpha_m>0$: the learner receives a positive vote.
+- If $\epsilon_m=0.5$, then $\alpha_m=0$: the learner contributes no information.
+- If $\epsilon_m>0.5$, its prediction can often be flipped, giving error $1-\epsilon_m<0.5$.
+- If $\epsilon_m=0$, the idealized formula gives $\alpha_m=\infty$. Implementations stop or clip the error for numerical stability.
+
+#### Follow-ups
+
+- [Why are mistakes upweighted?](#q-adaboost-misclassified-weights)
+- [Where does the alpha formula come from?](#q-adaboost-alpha)
+- [Why can weak learners form a strong classifier?](#q-adaboost-weak-learners)
+:::
+</details>
+
+### Q: Why does AdaBoost put more weight on misclassified examples? {#q-adaboost-misclassified-weights}
+
+**Short answer:** AdaBoost updates each weight by $\exp(-\alpha_m y_i h_m(x_i))$. For a correct prediction the signed product is $+1$, giving the multiplier $e^{-\alpha_m}$; for a mistake it is $-1$, giving $e^{\alpha_m}$. When the learner is better than chance, $\alpha_m>0$, so mistakes become relatively more important to the next learner.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+The next learner should spend less effort repeating what the ensemble can already handle and more effort on difficult examples. Reweighting changes the fitting distribution so that ignoring previous mistakes becomes costly.
+
+Because earlier weights already encode the previous ensemble's performance, repeatedly difficult or low-margin examples accumulate influence across rounds.
+
+#### Math
+
+Before round $m$, AdaBoost's weights can be written, up to normalization, as
+
+$$
+w_i^{(m)}
+\propto
+\exp\left(-y_iF_{m-1}(x_i)\right).
+$$
+
+After adding $\alpha_mh_m$,
+
+$$
+\begin{aligned}
+w_i^{(m+1)}
+&\propto
+\exp\left(
+-y_i\left[F_{m-1}(x_i)+\alpha_mh_m(x_i)\right]
+\right)\\
+&=
+w_i^{(m)}
+\exp\left(-\alpha_m y_i h_m(x_i)\right).
+\end{aligned}
+$$
+
+There are two cases:
+
+$$
+y_i h_m(x_i)=
+\begin{cases}
++1, & \text{correct classification},\\
+-1, & \text{misclassification}.
+\end{cases}
+$$
+
+Therefore,
+
+$$
+w_i^{(m+1)}
+\propto
+\begin{cases}
+w_i^{(m)}e^{-\alpha_m}, & \text{correct},\\
+w_i^{(m)}e^{\alpha_m}, & \text{incorrect}.
+\end{cases}
+$$
+
+The ratio between the incorrect and correct multipliers is
+
+$$
+\frac{e^{\alpha_m}}{e^{-\alpha_m}}
+=
+e^{2\alpha_m}
+=
+\frac{1-\epsilon_m}{\epsilon_m}.
+$$
+
+Normalization does not change this relative ratio because every updated weight is divided by the same $Z_m$.
+
+#### Consequence
+
+The mechanism is useful when difficult examples contain learnable structure. It becomes a weakness when persistent mistakes are mislabeled points or outliers, because exponential weighting can give them disproportionate influence.
+
+#### Common Mistakes
+
+- The update changes relative weights; normalization may cause some absolute weights to decrease even when their unnormalized multiplier exceeds one.
+- Mistakes are upweighted only under the usual useful-learner condition $\epsilon_m<0.5$, which gives $\alpha_m>0$.
+- The current learner's errors determine the new multiplier, while the old weights already summarize difficulty under the preceding ensemble.
+:::
+</details>
+
+### Q: Where does AdaBoost's alpha formula come from? {#q-adaboost-alpha}
+
+**Short answer:** With the new weak classifier fixed, AdaBoost chooses its vote by minimizing the ensemble's exponential loss along that one direction. Splitting the objective into correctly and incorrectly classified examples and solving the resulting one-dimensional optimization gives $\alpha=\tfrac12\log((1-\epsilon)/\epsilon)$.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Full Derivation
+
+AdaBoost can be viewed as stagewise minimization of exponential loss:
+
+$$
+\mathcal L(F)
+=
+\sum_{i=1}^{n}
+\exp\left(-y_iF(x_i)\right).
+$$
+
+At stage $m$, hold the selected weak classifier $h_m$ fixed and consider
+
+$$
+F_m(x)=F_{m-1}(x)+\alpha h_m(x).
+$$
+
+The loss as a function of $\alpha$ is
+
+$$
+\begin{aligned}
+\mathcal L(\alpha)
+&=
+\sum_{i=1}^{n}
+\exp\left(
+-y_i[F_{m-1}(x_i)+\alpha h_m(x_i)]
+\right)\\
+&=
+\sum_{i=1}^{n}
+\underbrace{
+\exp\left(-y_iF_{m-1}(x_i)\right)
+}_{w_i}
+\exp\left(-\alpha y_i h_m(x_i)\right).
+\end{aligned}
+$$
+
+Define
+
+$$
+C=\{i:y_i h_m(x_i)=+1\},
+\qquad
+E=\{i:y_i h_m(x_i)=-1\},
+$$
+
+and let
+
+$$
+W=\sum_i w_i,
+\qquad
+\epsilon=
+\frac{\sum_{i\in E}w_i}{W}.
+$$
+
+The correct examples have total weight $(1-\epsilon)W$, and the errors have total weight $\epsilon W$. Hence
+
+$$
+\mathcal L(\alpha)
+=
+W\left[
+(1-\epsilon)e^{-\alpha}
++
+\epsilon e^\alpha
+\right].
+$$
+
+Differentiate:
+
+$$
+\frac{d\mathcal L}{d\alpha}
+=
+W\left[
+-(1-\epsilon)e^{-\alpha}
++
+\epsilon e^\alpha
+\right].
+$$
+
+Set the derivative to zero:
+
+$$
+\epsilon e^\alpha
+=
+(1-\epsilon)e^{-\alpha}.
+$$
+
+Therefore,
+
+$$
+e^{2\alpha}
+=
+\frac{1-\epsilon}{\epsilon},
+$$
+
+and
+
+$$
+\boxed{
+\alpha^*
+=
+\frac{1}{2}
+\log\left(\frac{1-\epsilon}{\epsilon}\right)
+}.
+$$
+
+The second derivative is
+
+$$
+\frac{d^2\mathcal L}{d\alpha^2}
+=
+W\left[
+(1-\epsilon)e^{-\alpha}
++
+\epsilon e^\alpha
+\right]
+>0,
+$$
+
+so this stationary point is the unique minimum when $0<\epsilon<1$.
+
+At the optimum,
+
+$$
+\mathcal L(\alpha^*)
+=
+2W\sqrt{\epsilon(1-\epsilon)}.
+$$
+
+#### Interpretation
+
+- $\epsilon<0.5$ gives $\alpha>0$: a better-than-chance learner receives a positive vote.
+- $\epsilon=0.5$ gives $\alpha=0$: a chance-level learner adds nothing.
+- $\epsilon>0.5$ gives $\alpha<0$: the learner votes against its own prediction; if possible, flip it instead.
+- As $\epsilon\to0$, $\alpha\to\infty$: a nearly perfect learner dominates unless the implementation clips or stops.
+
+The logarithm converts an error-odds ratio into an additive vote. The factor $1/2$ follows from using labels and weak-learner outputs in $\{-1,+1\}$.
+
+#### Loss Connection
+
+Exponential loss is a differentiable surrogate for classification error: negative margins are penalized strongly even though zero-one loss itself is unsuitable for gradient-based stagewise optimization.
+
+The broader relationship between probabilistic assumptions, surrogate training losses, and evaluation metrics is covered in [loss-function selection](01-probability-statistics.qmd#q-loss-selection).
+
+#### Common Mistakes
+
+- The alpha formula is not an arbitrary confidence heuristic; it solves the stagewise exponential-loss problem.
+- The formula assumes a normalized weighted error or, equivalently, divides error weight by total weight.
+- Other label encodings and AdaBoost formulations may move the factor $1/2$, so state the $\{-1,+1\}$ convention.
+:::
+</details>
+
+### Q: Why does AdaBoost work even with weak learners? {#q-adaboost-weak-learners}
+
+**Short answer:** If each learner is slightly better than random on the current reweighted data, it receives a positive vote and reduces the stagewise exponential objective. Later learners focus on different mistakes, and their weighted sum can build increasingly positive classification margins even though each component is simple.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+A weak learner does not have to solve the entire problem. It only needs to add a useful correction under the current distribution of attention. Sequential reweighting encourages complementary learners, while weighted voting gives more influence to learners with lower weighted error.
+
+#### Mathematical View
+
+For normalized example weights, the normalization factor after adding learner $m$ is
+
+$$
+Z_m
+=
+(1-\epsilon_m)e^{-\alpha_m}
++
+\epsilon_m e^{\alpha_m}.
+$$
+
+Using the optimal
+
+$$
+\alpha_m
+=
+\frac12\log\left(\frac{1-\epsilon_m}{\epsilon_m}\right)
+$$
+
+gives
+
+$$
+Z_m
+=
+2\sqrt{\epsilon_m(1-\epsilon_m)}.
+$$
+
+If $\epsilon_m<0.5$, then $Z_m<1$, so that round decreases the normalized exponential objective.
+
+The signed ensemble margin of example $i$ is
+
+$$
+\operatorname{margin}_i
+=
+y_iF_M(x_i).
+$$
+
+A positive margin means correct classification; a larger positive margin means the weighted vote is more decisive. Because
+
+$$
+\exp(-y_iF_M(x_i))
+=
+\exp(-\operatorname{margin}_i),
+$$
+
+exponential loss strongly penalizes negative and small margins.
+
+With the usual initialization, one can also show
+
+$$
+\frac1n\sum_{i=1}^{n}
+\mathbf 1\{y_iF_M(x_i)\le0\}
+\le
+\frac1n\sum_{i=1}^{n}
+e^{-y_iF_M(x_i)}
+=
+\prod_{m=1}^{M}Z_m.
+$$
+
+This explains how repeated better-than-chance rounds can drive training error down. It is a training-set statement, not by itself a guarantee of generalization.
+
+#### Important Qualification
+
+The weak-learning condition must continue to hold under the changing weighted distributions, not merely on the original uniformly weighted dataset. If later rounds cannot find a learner with error below $0.5$, useful progress stalls.
+
+Label noise also matters: the algorithm may keep treating an unlearnable mislabeled point as a failure that deserves more attention.
+
+#### Follow-ups
+
+- Why does a decision stump often work as an AdaBoost base learner?
+- What is a margin, and how is it different from predicted probability?
+- Does decreasing exponential loss guarantee lower validation error?
+- What happens when no weak learner beats chance?
+:::
+</details>
+
+### Q: What are AdaBoost's weaknesses? {#q-adaboost-weaknesses}
+
+**Short answer:** AdaBoost's exponential loss can give enormous influence to persistent mistakes, so mislabeled examples and outliers are important failure modes. Training rounds are sequential, progress depends on finding useful weak learners under reweighting, and modern gradient-boosted trees usually offer more flexible losses and regularization for tabular problems.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Failure Modes
+
+- **Label noise and outliers:** repeatedly misclassified points receive increasing weight and can dominate later fitting.
+- **Sequential training:** round $m+1$ depends on round $m$, limiting parallelism across boosting rounds.
+- **Weak-learner failure:** if the base learner cannot achieve weighted error below $0.5$, that stage supplies no useful positive vote.
+- **Capacity choices:** base learners that are too simple may make no progress, while overly complex learners can reduce the benefit of incremental correction and generalize poorly.
+- **Probability quality:** the raw additive score is a margin, not automatically a calibrated probability.
+- **Objective mismatch:** minimizing exponential loss may not reflect asymmetric product costs or the final evaluation metric.
+
+#### Mitigation
+
+- Audit labels and influential high-weight examples.
+- Choose base-learner capacity and the number of rounds using held-out data.
+- Use shrinkage or early stopping where supported; see [stopping training](02-generalization-regularization.qmd#q-stop-training).
+- Consider gradient boosting with a loss better matched to the task or more robust to extreme errors.
+- Calibrate probabilities on separate held-out data when probability quality matters.
+- Diagnose the generalization gap before adding complexity; see the [regularization strategy](02-generalization-regularization.qmd#q-overfitting-interventions).
+
+#### Context
+
+AdaBoost remains conceptually important because it cleanly connects reweighting, additive models, margins, and exponential-loss minimization. For many modern tabular tasks, gradient-boosted-tree systems are more common because they support broader objectives, explicit regularization, subsampling, and stronger engineering optimizations.
+
+#### Common Mistakes
+
+- AdaBoost does not inevitably overfit after a fixed number of rounds; behavior depends on noise, margins, base learners, and data.
+- It is not restricted in principle to binary classification; multiclass extensions such as SAMME exist.
+- Example weighting need not mean literal resampling if the base learner supports weighted fitting.
+:::
+</details>
+
+## Gradient Boosting {#sec-gradient-boosting}
+
+### Q: What is gradient boosting? {#q-gradient-boosting}
+
+**Short answer:** Gradient boosting builds an additive model by repeatedly fitting a weak learner in the direction that most reduces the current loss. In function space, each new learner approximates the negative gradient of the loss with respect to the ensemble's current predictions.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Gradient boosting asks what change to the current predictions would reduce the loss most rapidly. It computes that desired change at every training example, fits a small model—usually a shallow decision tree—to approximate it, and adds the model to the ensemble.
+
+Each tree is therefore trained in response to the ensemble that came before it. This sequential correction distinguishes boosting from independently fitted bagged trees.
+
+#### Algorithm
+
+Start with a constant predictor:
+
+$$
+F_0(x)
+=
+\arg\min_c
+\sum_{i=1}^{n}
+\ell(y_i,c).
+$$
+
+At boosting round $m$:
+
+1. Compute the negative loss gradient, or pseudo-residual, for every example:
+
+   $$
+   r_{im}
+   =
+   -
+   \left.
+   \frac{\partial \ell(y_i,F(x_i))}
+        {\partial F(x_i)}
+   \right|_{F=F_{m-1}}.
+   $$
+
+2. Fit a weak learner $h_m(x)$ to the targets $r_{im}$.
+
+3. Optionally choose a step size by line search:
+
+   $$
+   \gamma_m
+   =
+   \arg\min_\gamma
+   \sum_i
+   \ell\!\left(
+     y_i,
+     F_{m-1}(x_i)+\gamma h_m(x_i)
+   \right).
+   $$
+
+4. Update the ensemble:
+
+   $$
+   F_m(x)
+   =
+   F_{m-1}(x)
+   +
+   \eta\gamma_m h_m(x),
+   $$
+
+   where $\eta$ is the learning rate or shrinkage parameter.
+
+The [loss-function choice](01-probability-statistics.qmd#q-loss-selection) determines what correction the gradient requests.
+
+#### Why Trees?
+
+Shallow trees can model nonlinear effects and feature interactions while remaining weak enough that many controlled updates can be combined. Their piecewise-constant regions also let different subsets of examples receive different prediction updates.
+
+Gradient boosting is a framework rather than a requirement to use trees, but gradient-boosted trees are its most common form for structured data.
+
+#### Follow-ups
+
+- What makes a learner "weak" in gradient boosting?
+- How is gradient boosting related to ordinary gradient descent?
+- Why do shallow trees often work better than unrestricted trees?
+- Can gradient boosting optimize classification and ranking losses?
+- Why must the trees be fitted sequentially?
+
+#### Common Mistakes
+
+Gradient boosting does not always fit literal prediction errors. It fits negative loss gradients; those happen to equal residuals for squared-error loss.
+
+It is also too absolute to say boosting "reduces only bias." Sequential correction often reduces bias, but depth, shrinkage, sampling, noise, and the number of trees all affect both bias and variance.
+:::
+</details>
+
+### Q: Why are gradient-boosting trees often described as fitting residuals? {#q-gradient-boosting-residuals}
+
+**Short answer:** For squared-error loss, the negative gradient with respect to the current prediction is exactly the residual $y_i-F(x_i)$. Fitting the next tree to residuals is therefore gradient descent in prediction-function space. For other losses, the corresponding targets are pseudo-residuals rather than ordinary residuals.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+A residual says how far the current prediction must move to reach the observed target. If the ensemble underpredicts an example, its residual is positive; if it overpredicts, its residual is negative. A tree fitted to these values learns regions in which the ensemble should move upward or downward.
+
+#### Mathematical View
+
+For squared-error loss, use the convenient factor $1/2$:
+
+$$
+\mathcal L(F)
+=
+\frac{1}{2}
+\sum_{i=1}^{n}
+\left(y_i-F(x_i)\right)^2.
+$$
+
+For training example $i$,
+
+$$
+\frac{\partial \mathcal L}
+     {\partial F(x_i)}
+=
+F(x_i)-y_i.
+$$
+
+The negative gradient is therefore
+
+$$
+-
+\frac{\partial \mathcal L}
+     {\partial F(x_i)}
+=
+y_i-F(x_i),
+$$
+
+which is exactly the residual. At round $m$, the next tree is fitted to
+
+$$
+r_{im}
+=
+y_i-F_{m-1}(x_i).
+$$
+
+Using squared error without the factor $1/2$ produces $2(y_i-F(x_i))$. That constant changes the scale, not the descent direction, and can be absorbed into the step size.
+
+#### Beyond Squared Error
+
+For a general differentiable loss,
+
+$$
+r_{im}
+=
+-
+\left.
+\frac{\partial \ell(y_i,F(x_i))}
+     {\partial F(x_i)}
+\right|_{F=F_{m-1}}
+$$
+
+is called a pseudo-residual. For binary cross-entropy with $y_i\in\{0,1\}$, parameterized by raw log-odds $F(x_i)$ and $p_i=\sigma(F(x_i))$, the negative gradient is
+
+$$
+r_i=y_i-p_i.
+$$
+
+It resembles a residual, but it is a probability-scale correction implied by the classification loss rather than an ordinary regression residual.
+
+#### Follow-ups
+
+- What are the pseudo-residuals for logistic loss?
+- Why include the factor $1/2$ in squared loss?
+- Does fitting a tree to residuals exactly realize the desired gradient step?
+- What changes if the weak learner cannot fit the residuals well?
+
+#### Common Mistakes
+
+The residual is $y_i-F(x_i)$, while the gradient of half-squared error is $F(x_i)-y_i$. The boosting target is the **negative** gradient, so the sign matters.
+:::
+</details>
+
+### Q: Derive gradient boosting as gradient descent in function space. {#q-gradient-boosting-functional-gradient}
+
+**Short answer:** Ordinary gradient descent updates a parameter vector along its negative loss gradient. Gradient boosting applies the same idea to the vector of model predictions: it computes the desired negative-gradient update at each training point, fits a weak learner to approximate that update, and adds the learner to the current function.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Full Derivation
+
+For a finite-dimensional model with parameters $\theta$, [gradient descent](03-optimization.qmd#gradient-descent-and-stochastic-gradients) uses
+
+$$
+\theta_m
+=
+\theta_{m-1}
+-
+\eta\nabla_\theta\mathcal L(\theta_{m-1}).
+$$
+
+Now treat the prediction function $F$ as the object being optimized. Its empirical risk is
+
+$$
+\mathcal R(F)
+=
+\sum_{i=1}^{n}
+\ell\!\left(y_i,F(x_i)\right).
+$$
+
+On the training set, the function is represented by its prediction vector:
+
+$$
+\mathbf F
+=
+\begin{bmatrix}
+F(x_1) & \cdots & F(x_n)
+\end{bmatrix}^{\mathsf T}.
+$$
+
+The gradient component for example $i$ at round $m$ is
+
+$$
+g_{im}
+=
+\left.
+\frac{\partial \ell(y_i,F(x_i))}
+     {\partial F(x_i)}
+\right|_{F=F_{m-1}}.
+$$
+
+An unconstrained steepest-descent update would move each training prediction along
+
+$$
+r_{im}=-g_{im}.
+$$
+
+Boosting cannot generally add an arbitrary collection of $n$ unrelated prediction changes. It must choose a function from the weak-learner class $\mathcal H$. It therefore projects the desired update onto that class, commonly by solving
+
+$$
+h_m
+=
+\arg\min_{h\in\mathcal H}
+\sum_{i=1}^{n}
+\left(r_{im}-h(x_i)\right)^2.
+$$
+
+A line search can then choose the magnitude:
+
+$$
+\gamma_m
+=
+\arg\min_\gamma
+\sum_{i=1}^{n}
+\ell\!\left(
+y_i,
+F_{m-1}(x_i)+\gamma h_m(x_i)
+\right).
+$$
+
+Finally,
+
+$$
+F_m(x)
+=
+F_{m-1}(x)
++
+\eta\gamma_mh_m(x).
+$$
+
+Because $h_m$ approximates the **negative** gradient, it is added to the current function.
+
+#### Interpretation
+
+There are two approximations:
+
+1. The unrestricted negative-gradient vector is replaced by a function the weak learner can express.
+2. Shrinkage scales the fitted direction to make a more conservative update.
+
+The base learner is thus a structured approximation to a descent direction. With trees, examples in the same leaf share an update. Formal functional-analysis machinery is unnecessary for the interview argument: on a finite training set, the key object is the gradient with respect to the current prediction at each example.
+
+#### Practical Nuance
+
+Some implementations absorb $\gamma_m$ into the fitted leaf values rather than performing one global line search. Newton-style tree boosting may also use curvature when choosing those values.
+
+The central idea remains unchanged: construct an additive function by repeatedly choosing a learner that lowers the current empirical objective.
+
+#### Connections
+
+- The loss supplies the gradient direction: [choosing a loss](01-probability-statistics.qmd#q-loss-selection).
+- The update mirrors ordinary [gradient descent](03-optimization.qmd#gradient-descent-and-stochastic-gradients).
+- Shrinkage connects to [learning rates and schedules](03-optimization.qmd#learning-rates-and-schedules), although boosting's learning rate scales each new learner rather than a minibatch parameter update.
+
+#### Follow-ups
+
+- In what sense is fitting a weak learner a projection?
+- When does the fitted learner equal the exact negative gradient?
+- Why might line search be useful?
+- How does second-order boosting modify this derivation?
+:::
+</details>
+
+### Q: What does the learning rate do in gradient boosting? {#q-gradient-boosting-learning-rate}
+
+**Short answer:** The learning rate shrinks each new learner's contribution. A smaller value makes boosting more conservative and often improves generalization, but usually requires more trees. I tune learning rate and number of trees together; making the rate extremely small can underfit under a fixed compute or tree budget.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Mathematical View
+
+The update is
+
+$$
+F_m(x)
+=
+F_{m-1}(x)
++
+\eta\gamma_mh_m(x),
+\qquad 0<\eta\leq 1.
+$$
+
+After $M$ rounds,
+
+$$
+F_M(x)
+=
+F_0(x)
++
+\eta
+\sum_{m=1}^{M}
+\gamma_mh_m(x).
+$$
+
+The factor $\eta$ is called shrinkage. It reduces how far the ensemble moves along each fitted direction, so later learners can make finer corrections.
+
+#### Trade-offs
+
+- A lower $\eta$ generally requires a larger $M$.
+- Conservative steps can reduce sensitivity to any single tree.
+- Too few trees at a small learning rate produces underfitting.
+- Too many trees can still overfit, especially with deep trees or noisy labels.
+- Tree depth, minimum leaf size, row or feature subsampling, and regularization interact with shrinkage.
+
+A useful search treats learning rate and tree count as a pair rather than independent knobs.
+
+#### Diagnostics
+
+If both training and validation metrics are still improving at the final tree, the model may simply need more rounds.
+
+If training performance continues improving while validation performance deteriorates, select an earlier checkpoint or strengthen regularization. See [stopping training](02-generalization-regularization.qmd#q-stop-training).
+
+#### Common Mistakes
+
+"Smaller is always better" is incorrect. A smaller learning rate changes the required number of trees and computational cost, and may be worse under a fixed training budget.
+
+Boosting shrinkage is analogous to a step size, but it should not be confused with a neural optimizer's entire learning-rate schedule.
+:::
+</details>
+
+## XGBoost {#sec-xgboost}
+
+### Q: What is XGBoost, and how is it different from ordinary gradient boosting? {#q-xgboost}
+
+**Short answer:** XGBoost is a specific regularized gradient-boosted-tree algorithm and optimized system. It still adds trees sequentially, but uses a second-order loss approximation, explicit penalties on tree complexity and leaf scores, shrinkage, row and feature subsampling, sparse-value handling, and efficient tree construction.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Conceptual Hierarchy
+
+- **Boosting** is the general idea of building an additive ensemble sequentially.
+- **Gradient boosting** chooses each update using gradients of a differentiable loss.
+- **XGBoost** is a particular regularized, Newton-style gradient-boosted-tree algorithm and implementation.
+
+XGBoost is therefore an instance of gradient boosting, not an unrelated alternative to it.
+
+#### Main Differences
+
+Compared with a basic first-order gradient-boosted-tree implementation, XGBoost commonly adds:
+
+- first- and second-order loss information;
+- an explicit penalty for leaf count and leaf-score magnitude;
+- learning-rate shrinkage;
+- row and column subsampling;
+- constraints such as minimum child weight;
+- learned default directions for missing values;
+- highly optimized exact or approximate split construction.
+
+These features influence statistical behavior as well as runtime.
+
+#### What Remains the Same
+
+Trees are still fitted sequentially, and each new tree is chosen to improve the current additive model:
+
+$$
+\hat y_i^{(t)}
+=
+\hat y_i^{(t-1)}
++
+f_t(x_i).
+$$
+
+The prediction is still the sum of tree outputs. XGBoost does not turn boosting into an independently fitted ensemble.
+
+#### Follow-ups
+
+- What is "second order" about XGBoost?
+- Which terms regularize the tree?
+- How are leaf values chosen?
+- How is split gain derived?
+- Why can row or feature subsampling improve generalization?
+
+#### Common Mistakes
+
+Calling XGBoost merely "faster gradient boosting" misses its objective and regularization design.
+
+Conversely, not every feature of the software package defines the boosting principle. Boosting and gradient boosting are broader ideas than one library.
+:::
+</details>
+
+### Q: What objective does XGBoost optimize? {#q-xgboost-objective}
+
+**Short answer:** XGBoost minimizes training loss plus regularization over the trees. A standard form is $\sum_i\ell(y_i,\hat y_i)+\sum_k\Omega(f_k)$, where $\Omega(f)=\gamma T+\frac12\lambda\lVert w\rVert_2^2$ penalizes the number of leaves and the magnitudes of their scores.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Objective
+
+For an ensemble of $K$ trees,
+
+$$
+\hat y_i
+=
+\sum_{k=1}^{K}f_k(x_i),
+$$
+
+and the regularized objective is
+
+$$
+\operatorname{Obj}
+=
+\sum_{i=1}^{n}
+\ell(y_i,\hat y_i)
++
+\sum_{k=1}^{K}
+\Omega(f_k).
+$$
+
+A common tree penalty is
+
+$$
+\Omega(f)
+=
+\gamma T
++
+\frac{1}{2}\lambda\lVert w\rVert_2^2,
+$$
+
+where $T$ is the number of leaves, $w_j$ is the score assigned to leaf $j$, $\gamma$ charges for adding leaves, and $\lambda$ shrinks leaf scores. The loss is determined by the prediction task; see [loss-function selection](01-probability-statistics.qmd#q-loss-selection).
+
+#### At One Boosting Round
+
+At round $t$,
+
+$$
+\hat y_i^{(t)}
+=
+\hat y_i^{(t-1)}
++
+f_t(x_i).
+$$
+
+Terms involving only previously built trees are fixed when optimizing $f_t$. The round-specific objective can therefore be written, up to constants, as
+
+$$
+\operatorname{Obj}^{(t)}
+=
+\sum_i
+\ell\!\left(
+y_i,
+\hat y_i^{(t-1)}+f_t(x_i)
+\right)
++
+\Omega(f_t).
+$$
+
+XGBoost approximates the loss term locally and chooses the new tree to reduce this regularized objective.
+
+#### Regularization Interpretation
+
+The $\lambda$ term is L2 regularization on **leaf scores**. It stabilizes and shrinks a leaf update when its aggregated gradient evidence is weak.
+
+This shares the general logic of [L2 regularization](02-generalization-regularization.qmd#q-weight-decay), but it is not an optimizer weight-decay update. The penalized parameters here are the scores of the new tree's leaves.
+
+The $\gamma T$ term imposes a discrete cost for tree complexity. A proposed split must improve the fitted loss enough to justify the additional leaf.
+
+#### Notation Warning
+
+The symbol $\gamma$ here denotes XGBoost's leaf-complexity penalty. It is unrelated to the line-search coefficient $\gamma_m$ often used in generic gradient-boosting notation.
+
+#### Follow-ups
+
+- What happens as $\lambda$ increases?
+- How does $\gamma$ affect tree structure?
+- Why is regularizing leaf values useful?
+- How does this objective lead to the split-gain formula?
+:::
+</details>
+
+### Q: Why does XGBoost use both first- and second-order derivatives? {#q-xgboost-second-order}
+
+**Short answer:** The gradient tells XGBoost which direction should lower the loss, while the Hessian describes local curvature and helps scale that update. Together they give a Newton-style local approximation that supports principled leaf weights and split scores rather than treating all gradient corrections as equally curved.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+A gradient says whether increasing a prediction will raise or lower the loss. It does not by itself say how rapidly that gradient will change. The second derivative supplies local curvature and gives a more informative local model of the loss.
+
+#### Full Derivation
+
+At boosting round $t$, let
+
+$$
+z_i=\hat y_i^{(t-1)}
+\qquad\text{and}\qquad
+\Delta_i=f_t(x_i).
+$$
+
+A second-order Taylor expansion around $z_i$ gives
+
+$$
+\ell(y_i,z_i+\Delta_i)
+\approx
+\ell(y_i,z_i)
++
+g_i\Delta_i
++
+\frac{1}{2}h_i\Delta_i^2,
+$$
+
+where
+
+$$
+g_i
+=
+\left.
+\frac{\partial \ell(y_i,\hat y)}
+     {\partial \hat y}
+\right|_{\hat y=z_i},
+\qquad
+h_i
+=
+\left.
+\frac{\partial^2 \ell(y_i,\hat y)}
+     {\partial \hat y^2}
+\right|_{\hat y=z_i}.
+$$
+
+Substituting $\Delta_i=f_t(x_i)$,
+
+$$
+\operatorname{Obj}^{(t)}
+\approx
+\sum_i
+\left[
+\ell(y_i,z_i)
++
+g_i f_t(x_i)
++
+\frac{1}{2}h_i f_t(x_i)^2
+\right]
++
+\Omega(f_t).
+$$
+
+The old-loss values $\ell(y_i,z_i)$ do not depend on the new tree, so they can be omitted during optimization:
+
+$$
+\widetilde{\operatorname{Obj}}^{(t)}
+=
+\sum_i
+\left[
+g_i f_t(x_i)
++
+\frac{1}{2}h_i f_t(x_i)^2
+\right]
++
+\Omega(f_t).
+$$
+
+This approximate quadratic objective yields closed-form scores for a fixed tree structure.
+
+#### Newton Connection
+
+For one unconstrained scalar update $\Delta$ with locally positive curvature $h>0$, minimizing
+
+$$
+g\Delta+\frac12h\Delta^2
+$$
+
+gives
+
+$$
+\Delta^*=-\frac{g}{h}.
+$$
+
+That is the familiar Newton step. A tree constrains many examples to share a leaf value, and XGBoost adds regularization, producing
+
+$$
+w_j^*=-\frac{G_j}{H_j+\lambda}.
+$$
+
+#### Examples
+
+For half-squared loss,
+
+$$
+\ell(y,z)=\frac12(y-z)^2,
+\qquad
+g=z-y,
+\qquad
+h=1.
+$$
+
+For binary log loss with $y\in\{0,1\}$, using raw margin $z$ and $p=\sigma(z)$,
+
+$$
+g=p-y,
+\qquad
+h=p(1-p).
+$$
+
+Thus classification examples contribute different curvature depending on the current probability.
+
+#### Common Mistakes
+
+The Taylor expression is exact for a quadratic loss but only a local approximation for a general loss.
+
+The Hessian here is the second derivative with respect to each example's current scalar prediction, not the full Hessian of every tree-construction decision.
+:::
+</details>
+
+### Q: Derive the optimal leaf weight in XGBoost. {#q-xgboost-leaf-weight}
+
+**Short answer:** For a fixed leaf $j$, aggregate its gradients and Hessians as $G_j=\sum_{i\in I_j}g_i$ and $H_j=\sum_{i\in I_j}h_i$. Its quadratic objective is $G_jw_j+\frac12(H_j+\lambda)w_j^2$, so setting the derivative to zero gives $w_j^*=-G_j/(H_j+\lambda)$.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Full Derivation
+
+Let a tree map input $x$ to leaf $q(x)$, and let leaf $j$ have score $w_j$:
+
+$$
+f_t(x)=w_{q(x)}.
+$$
+
+Define the examples assigned to leaf $j$ as
+
+$$
+I_j=\{i:q(x_i)=j\}.
+$$
+
+Starting from the second-order round objective,
+
+$$
+\widetilde{\operatorname{Obj}}^{(t)}
+=
+\sum_i
+\left[
+g_if_t(x_i)
++
+\frac12h_if_t(x_i)^2
+\right]
++
+\gamma T
++
+\frac12\lambda\sum_{j=1}^{T}w_j^2.
+$$
+
+Group examples by leaf and define
+
+$$
+G_j=\sum_{i\in I_j}g_i,
+\qquad
+H_j=\sum_{i\in I_j}h_i.
+$$
+
+Then
+
+$$
+\widetilde{\operatorname{Obj}}^{(t)}
+=
+\sum_{j=1}^{T}
+\left[
+G_jw_j
++
+\frac12(H_j+\lambda)w_j^2
+\right]
++
+\gamma T.
+$$
+
+For a fixed tree structure, optimize one leaf score:
+
+$$
+\frac{\partial\widetilde{\operatorname{Obj}}_j}
+     {\partial w_j}
+=
+G_j+(H_j+\lambda)w_j.
+$$
+
+Setting the derivative to zero gives
+
+$$
+\boxed{
+w_j^*
+=
+-\frac{G_j}{H_j+\lambda}
+}.
+$$
+
+Assuming $H_j+\lambda>0$, the quadratic is convex in $w_j$, so this stationary point is its minimum.
+
+#### Optimal Objective Value
+
+Substitute $w_j^*=-G_j/(H_j+\lambda)$:
+
+$$
+\begin{aligned}
+\widetilde{\operatorname{Obj}}_j(w_j^*)
+&=
+G_j\left(-\frac{G_j}{H_j+\lambda}\right)
++
+\frac12(H_j+\lambda)
+\left(\frac{G_j^2}{(H_j+\lambda)^2}\right)\\
+&=
+-\frac{G_j^2}{H_j+\lambda}
++
+\frac12\frac{G_j^2}{H_j+\lambda}\\
+&=
+-\frac12
+\frac{G_j^2}{H_j+\lambda}.
+\end{aligned}
+$$
+
+Consequently, the best approximate score for a fixed tree structure is
+
+$$
+\widetilde{\operatorname{Obj}}^*
+=
+-\frac12
+\sum_{j=1}^{T}
+\frac{G_j^2}{H_j+\lambda}
++
+\gamma T.
+$$
+
+This expression is the basis of split scoring.
+
+#### Interpretation
+
+- $G_j$ gives the aggregate direction requested by examples in the leaf.
+- The minus sign moves against the loss gradient.
+- $H_j$ scales the update using curvature.
+- $\lambda$ shrinks the leaf value and stabilizes leaves with weak evidence.
+- $\gamma$ does not affect the optimal score of a fixed leaf; it affects whether the tree structure is worth its complexity.
+
+#### Follow-ups
+
+- Why does the denominator contain a sum of Hessians?
+- What happens to $w_j^*$ as $\lambda$ increases?
+- Why does $\gamma$ not appear in the leaf-weight formula?
+- How does this reduce to a residual-style update under squared loss?
+:::
+</details>
+
+### Q: How does XGBoost decide whether a split is useful? {#q-xgboost-split-gain}
+
+**Short answer:** XGBoost compares the best regularized objective value of the parent leaf with those of its proposed children. A split is useful only when the improvement from fitting separate child scores exceeds the complexity cost $\gamma$, along with any implementation constraints such as minimum child weight.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Full Derivation
+
+Let a parent leaf have aggregate statistics
+
+$$
+G=G_L+G_R,
+\qquad
+H=H_L+H_R.
+$$
+
+The optimized approximate contribution of the unsplit parent, including its one-leaf complexity cost, is
+
+$$
+\operatorname{Score}_{\mathrm{parent}}
+=
+-\frac12\frac{G^2}{H+\lambda}
++
+\gamma.
+$$
+
+After the split, the two children contribute
+
+$$
+\operatorname{Score}_{\mathrm{children}}
+=
+-\frac12
+\left[
+\frac{G_L^2}{H_L+\lambda}
++
+\frac{G_R^2}{H_R+\lambda}
+\right]
++
+2\gamma.
+$$
+
+Define gain as the old objective minus the new objective:
+
+$$
+\operatorname{Gain}
+=
+\operatorname{Score}_{\mathrm{parent}}
+-
+\operatorname{Score}_{\mathrm{children}}.
+$$
+
+Therefore,
+
+$$
+\boxed{
+\operatorname{Gain}
+=
+\frac12
+\left[
+\frac{G_L^2}{H_L+\lambda}
++
+\frac{G_R^2}{H_R+\lambda}
+-
+\frac{G^2}{H+\lambda}
+\right]
+-
+\gamma
+}.
+$$
+
+A split creates one additional leaf overall, so the net complexity penalty is $\gamma$, not $2\gamma$.
+
+#### Interpretation
+
+The two child terms measure how much objective reduction is available when the left and right groups receive separate optimal scores. The parent term subtracts what could already be achieved without splitting.
+
+The split should be accepted only if this extra fit is large enough to pay for the added complexity. Regularization therefore participates directly in tree construction rather than being applied only after a tree is grown.
+
+#### Practical Constraints
+
+Positive analytical gain may not be sufficient. Implementations can also require adequate Hessian mass in each child, minimum observations or weights, maximum depth, monotonic constraints, or valid handling of missing-value directions.
+
+The exact reported gain can differ by a constant factor across conventions, especially when implementations omit the displayed $1/2$. The ranking of candidate splits is unchanged when the convention is applied consistently.
+
+#### Follow-ups
+
+- Why does splitting incur only one net $\gamma$ penalty?
+- How does increasing $\lambda$ change split decisions?
+- What role does minimum child weight play?
+- Can a split have large unregularized improvement but negative regularized gain?
+:::
+</details>
+
+## Boosted-Tree Comparisons {#sec-boosted-tree-comparisons}
+
+### Q: AdaBoost vs Gradient Boosting? {#q-adaboost-vs-gradient-boosting}
+
+**Short answer:** Both build stagewise additive ensembles. AdaBoost's classic binary-classification algorithm reweights examples and assigns each classifier a closed-form vote under exponential loss. Gradient boosting is the broader framework: it fits weak learners to negative gradients of a chosen differentiable loss, so it naturally extends to regression, classification, ranking, and other objectives.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Comparison
+
+| Aspect | AdaBoost | Gradient Boosting |
+|---|---|---|
+| Classic focus | Binary classification | General differentiable objectives |
+| Correction signal | Reweighted examples | Negative gradients or pseudo-residuals |
+| Canonical loss view | Exponential loss | User-selected differentiable loss |
+| Learner contribution | Explicit $\alpha_m$ vote | Shrinkage and optional line search or fitted leaf values |
+| Sensitivity | Can focus aggressively on mislabeled points | Depends strongly on loss and regularization |
+
+#### Mathematical Connection
+
+The distinction is not absolute. AdaBoost can itself be interpreted as stagewise additive minimization of exponential loss:
+
+$$
+\sum_i
+\exp\!\left(-y_iF(x_i)\right).
+$$
+
+Its example weights are proportional to
+
+$$
+\exp\!\left(-y_iF_{m-1}(x_i)\right),
+$$
+
+so low-margin or misclassified examples exert more influence.
+
+Gradient boosting abstracts this idea: rather than committing to exponential loss and a specific binary-classification update, it derives the correction from the gradient of the selected objective.
+
+#### Choosing Between Them
+
+AdaBoost is useful for explaining core boosting mechanics and can work well with simple weak classifiers on relatively clean data.
+
+Modern gradient-boosted-tree methods are usually more flexible for tabular tasks because the loss, shrinkage, sampling, tree constraints, and regularization can be adapted to the problem.
+
+#### Common Mistakes
+
+Do not say that AdaBoost is unrelated to gradient optimization. Its exponential-loss interpretation is precisely what connects it to stagewise additive optimization.
+
+Do not say that all gradient boosting explicitly reweights examples in the same way as the textbook AdaBoost algorithm.
+:::
+</details>
+
+### Q: Gradient Boosting vs XGBoost? {#q-gradient-boosting-vs-xgboost}
+
+**Short answer:** Gradient boosting is the general framework of adding weak learners along loss-reducing directions. XGBoost is a specific regularized boosted-tree algorithm and implementation that uses second-order derivatives, explicit tree penalties, shrinkage, subsampling, sparse-value handling, and optimized split construction.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Comparison
+
+| Aspect | Gradient Boosting | XGBoost |
+|---|---|---|
+| Scope | General algorithmic framework | Specific boosted-tree algorithm and system |
+| Base learners | Any suitable weak learner | Decision trees |
+| Derivative information | Negative gradients; implementations vary | First and second derivatives |
+| Regularization | Framework-dependent | Explicit leaf-count and leaf-score penalties |
+| Sampling | Optional | Row and column subsampling supported directly |
+| Missing values | Implementation-dependent | Learns default split directions |
+| Engineering | Abstract procedure or many implementations | Optimized exact or approximate tree construction |
+
+#### Deep Dive
+
+A basic gradient-boosting implementation may fit trees to pseudo-residuals and choose leaf values through line search. XGBoost instead constructs a quadratic approximation of the round objective:
+
+$$
+\sum_i
+\left[
+g_if_t(x_i)
++
+\frac12h_if_t(x_i)^2
+\right]
++
+\Omega(f_t).
+$$
+
+That formulation yields regularized closed-form leaf scores and a regularized split-gain criterion. XGBoost remains gradient boosting because it still constructs an additive model sequentially from loss derivatives.
+
+#### Practical Choice
+
+"Gradient boosting" in an interview may mean the conceptual algorithm or a classical implementation. Clarify which interpretation is intended.
+
+When comparing libraries, include other implementations such as histogram-based gradient boosting, LightGBM, or CatBoost only if relevant to the question. The durable distinction is framework versus particular algorithm—not a blanket speed ranking.
+
+#### Common Mistakes
+
+XGBoost is not a separate ensemble family parallel to gradient boosting.
+
+It is also inaccurate to define it only by runtime. Its second-order objective and explicit regularization change how tree values and structures are selected.
+:::
+</details>
+
+### Q: Random Forest vs XGBoost? {#q-random-forest-vs-xgboost}
+
+**Short answer:** Random Forest fits many decorrelated trees largely independently and averages them, making it a robust, parallelizable variance-reduction baseline. XGBoost builds trees sequentially to optimize a regularized loss, often giving stronger tuned tabular accuracy but requiring more careful hyperparameter control and offering less training parallelism across trees.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Training Mechanics
+
+| Aspect | Random Forest | XGBoost |
+|---|---|---|
+| Ensemble method | Bagging | Sequential boosting |
+| Tree dependence | Trees are largely independent | Each tree depends on the current ensemble |
+| Data randomization | Bootstrap samples and feature subsampling | Optional row and column subsampling |
+| Combination | Average or majority vote | Additive weighted scores |
+| Parallelism | Trees can be trained concurrently | Boosting rounds are sequential |
+| Typical trees | Deep, high-variance trees | Usually shallower, regularized correction trees |
+
+#### Bias and Variance
+
+Random Forest decorrelates high-variance trees and averages them, primarily targeting variance. It can also affect bias, so "bagging only reduces variance" is too strong.
+
+XGBoost iteratively corrects errors and can reduce bias substantially, but a highly expressive boosted ensemble can also have high variance. Shrinkage, depth, subsampling, leaf constraints, and early stopping govern the trade-off.
+
+See the broader [bias–variance discussion](02-generalization-regularization.qmd#q-bias-variance).
+
+#### Practical Choice
+
+Favor Random Forest when:
+
+- a dependable baseline is needed quickly;
+- tuning budget is limited;
+- parallel training is valuable;
+- the dataset is noisy and a stable average is attractive.
+
+Favor XGBoost when:
+
+- predictive performance on structured data is critical;
+- validation and tuning are available;
+- the loss or class costs require customization;
+- careful control of model complexity is possible.
+
+These are tendencies, not universal rules. Compare both under the same splits and task-relevant metric.
+
+#### Follow-ups
+
+- Why does feature subsampling decorrelate Random Forest trees?
+- Why can boosting be more sensitive to noisy labels?
+- Which model is easier to parallelize during training?
+- How would class imbalance affect the comparison?
+- When might Random Forest outperform a tuned boosted model?
+
+#### Common Mistakes
+
+Do not claim XGBoost always wins on tabular data. Dataset size, noise, feature representation, tuning, validation design, latency, and operational constraints all matter.
+
+Do not compare an untuned Random Forest with a heavily tuned XGBoost model and attribute the entire difference to the ensemble paradigm.
+:::
+</details>
 
 ## Support vector machines
 
