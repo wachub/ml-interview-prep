@@ -1,0 +1,104 @@
+:root {
+  --qa-surface: #fdfdfc;
+  --qa-surface-soft: #f6f7f5;
+  --qa-ink: #262a2e;
+  --qa-muted: #667078;
+  --qa-line: #dce1df;
+  --qa-accent: #426d67;
+  --qa-accent-soft: #e7f0ed;
+}
+
+body { color: var(--qa-ink); background: #fafaf8; }
+#quarto-content main.content { line-height: 1.68; }
+#quarto-content h1 { letter-spacing: -0.025em; }
+#quarto-content h2 { margin-top: 2.6rem; color: #30383a; }
+
+/* A question heading, its answer, and its disclosure form one quiet study card. */
+#quarto-content section.level3:has(> h3) {
+  margin: 1.7rem 0;
+  padding: 1.2rem 1.35rem;
+  border: 1px solid var(--qa-line);
+  border-radius: 12px;
+  background: var(--qa-surface);
+  box-shadow: 0 2px 10px rgb(32 46 43 / 0.035);
+}
+#quarto-content section.level3:has(> h3) > h3 {
+  margin: 0;
+  padding: 0;
+  color: #263b3a;
+  font-size: 1.15rem;
+}
+#quarto-content section.level3 > h3 + p {
+  margin: .55rem 0 1rem;
+  padding: 0;
+  color: #363d42;
+}
+#quarto-content section.level3 > h3 + p strong:first-child { color: var(--qa-muted); font-size: .86em; }
+#quarto-content section.level3 > details { margin-top: .9rem; }
+
+#quarto-content details > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+  margin-top: .1rem;
+  padding: .48rem .78rem;
+  border: 1px solid #cbdad5;
+  border-radius: 7px;
+  color: #315b55;
+  background: #f5faf8;
+  cursor: pointer;
+  font-size: .92rem;
+  list-style: none;
+  transition: background-color 160ms ease-out, border-color 160ms ease-out, color 160ms ease-out;
+}
+#quarto-content details > summary::-webkit-details-marker { display: none; }
+#quarto-content details > summary::before { content: "›"; font-size: 1.25em; line-height: .8; transition: transform 160ms ease-out; }
+#quarto-content details[open] > summary::before { transform: rotate(90deg); }
+#quarto-content details > summary:hover { background: var(--qa-accent-soft); border-color: #98b8af; }
+#quarto-content details[open] > .panel-tabset { margin-top: 1rem; animation: qa-reveal 180ms ease-out both; }
+
+#quarto-content details .panel-tabset > .nav-tabs {
+  gap: .38rem;
+  margin: 0;
+  padding: .28rem;
+  border-bottom: 0;
+  border-radius: 9px 9px 0 0;
+  background: var(--qa-surface-soft);
+}
+#quarto-content details .panel-tabset .nav-link {
+  border: 0;
+  border-radius: 6px;
+  padding: .42rem .72rem;
+  color: var(--qa-muted);
+  font-size: .88rem;
+  transition: color 160ms ease-out, background-color 160ms ease-out;
+}
+#quarto-content details .panel-tabset .nav-link:hover { color: #294d48; background: #edf3f0; }
+#quarto-content details .panel-tabset .nav-link.active { color: #294d48; background: var(--qa-accent-soft); font-weight: 600; }
+#quarto-content details .panel-tabset .tab-content {
+  padding: 1.15rem 1.25rem;
+  border: 1px solid var(--qa-line);
+  border-top: 0;
+  border-radius: 0 0 9px 9px;
+  background: #fff;
+}
+#quarto-content details .panel-tabset .tab-pane > h4 { margin-top: 0; font-size: 1rem; color: #374443; }
+
+#quarto-content .math.display { margin: 1.35rem 0; overflow-x: auto; overflow-y: hidden; padding: .1rem .25rem; }
+#quarto-content .math.display:has(.katex-display) { border-left: 2px solid #d8e6e1; }
+
+@keyframes qa-reveal { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
+@media (prefers-color-scheme: dark) {
+  body { background: #202322; color: #e1e5e2; }
+  :root { --qa-surface: #292d2b; --qa-surface-soft: #333835; --qa-ink: #e1e5e2; --qa-muted: #afb9b5; --qa-line: #46504b; --qa-accent-soft: #29443d; }
+  #quarto-content h2, #quarto-content h3, #quarto-content h3 + p { color: var(--qa-ink); }
+  #quarto-content details .panel-tabset .tab-content { background: #292d2b; }
+}
+@media (max-width: 576px) {
+  #quarto-content section.level3:has(> h3) { padding-inline: 1rem; }
+  #quarto-content details .panel-tabset > .nav-tabs { flex-wrap: nowrap; overflow-x: auto; }
+  #quarto-content details .panel-tabset .nav-link { white-space: nowrap; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}

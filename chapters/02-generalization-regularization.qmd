@@ -1,105 +1,445 @@
 # Generalization, Validation, and Regularization
 
-The central question is not “how do I lower training loss?” It is “how do I obtain reliable performance on future examples drawn from the deployment setting?” Generalization connects data, model capacity, validation practice, and regularization.
+The visible layer is for rapid interview revision. Expand a question to compare mechanisms, diagnostics, and natural follow-up paths.
 
-## Training error, test error, and capacity
+## Generalization and Bias–Variance
 
-Training error measures performance on examples used to fit parameters. Test error estimates performance on held-out examples that were not used for fitting *or* tuning. A flexible model can drive training error down while learning idiosyncrasies of a finite sample; this is overfitting. A model unable to capture useful structure underfits.
+### Q: What do generalization, overfitting, and underfitting mean?
 
-Capacity is a model's ability to express varied functions. Parameter count is one signal, but not the whole story: features, constraints, training dynamics, data size, and architecture all influence effective capacity. **Inductive bias** is the set of preferences that lets a learner generalize beyond observed points—for example, convolution's preference for local, translation-related patterns.
+**Short answer:** Generalization is performance on new examples from the deployment distribution. Overfitting is fitting training-specific noise or accidental patterns, usually creating a train-to-held-out gap; underfitting is missing useful structure, so both training and held-out performance remain poor.
 
-### Bias–variance trade-off
+<details><summary><strong>Expand explanation</strong></summary>
 
-For squared-error regression, expected test error can be decomposed conceptually into irreducible noise, bias, and variance. A highly constrained model may have high bias; a model sensitive to which examples it sees may have high variance. Increasing data often reduces variance. Changing architecture or regularization changes both terms, so the phrase is a diagnostic lens, not a rule that “simpler is always better.”
+::: {.panel-tabset}
+#### Intuition
 
-## Validation is evidence, not immunity
+Training loss only measures fit to observed data. A held-out score estimates generalization only when its examples and feature availability resemble future use.
 
-### Train, validation, and test splits
+#### Example
 
-- The **training set** estimates parameters.
-- The **validation set** supports choices: hyperparameters, architecture, stopping point, and thresholds.
-- The **test set** is reserved for a final, credible estimate after decisions are frozen.
+A model that memorizes rare label noise may have near-zero training loss but poor validation loss. A shallow model that cannot express a clear nonlinear relationship underfits.
 
-A validation set does not prevent overfitting when we repeatedly inspect it and select the configuration that happens to score well there. We have effectively trained our decision process on validation noise. This risk grows with many trials, a small validation set, adaptive iteration, or choices informed by validation examples.
+#### Follow-ups
 
-### Cross-validation and split design
-
-Cross-validation rotates held-out folds to make better use of limited, approximately exchangeable data. It is useful when full retraining is affordable and the split respects the data-generating process. For time series, split by time; for multiple records per user, group by user; for correlated examples, prevent the same source leaking across folds. Random splitting can create a beautifully precise answer to the wrong question.
-
-### Hyperparameter selection
-
-Choose hyperparameters by a predefined search protocol on training/validation data, then make one final test evaluation if possible. Compare to a simple baseline and track uncertainty across seeds or folds. The best observed validation score is optimistic, especially after broad search; prefer improvements that repeat and matter for the decision.
-
-::: {.callout-important}
-## Interview-quality answer: Why is a validation set not enough?
-
-It protects against fitting the *training examples*, but it can itself be overfit through repeated adaptive model selection. Keep a test set untouched, use splits that reflect deployment, limit and log searches, and verify promising changes across seeds, folds, or a fresh holdout.
+- How do you distinguish overfitting from distribution shift?
+- Why is training loss not a model-selection metric?
 :::
+</details>
 
-## Explicit regularization
+### Q: What is model capacity? Does a larger model necessarily overfit more?
 
-Regularization adds a preference that reduces reliance on arbitrary details of the training sample. It usually trades a small increase in training error for lower expected error on new data.
+**Short answer:** Capacity is the range and complexity of functions a learning procedure can fit. Larger models often have more capacity, but they do not necessarily generalize worse because data scale, architecture, optimization, and regularization determine effective behavior.
 
-### L2 regularization and weight decay
+<details><summary><strong>Expand explanation</strong></summary>
 
-L2 regularization adds \(\lambda\lVert w\rVert_2^2\) to the objective. It discourages large weights, often making predictions less sensitive to small input changes and reducing variance. For linear models with standardized features it has a clean interpretation; without scaling, the same penalty treats feature units unequally.
+::: {.panel-tabset}
+#### Deep Dive
 
-In plain SGD, L2 regularization produces an update that shrinks weights alongside the gradient, which is why it is often called weight decay. With adaptive optimizers such as Adam, coupled L2 and decoupled weight decay are not generally equivalent: decoupled decay applies a direct shrinkage separate from the adaptive gradient transformation.
+Parameter count is an imperfect proxy. Pretraining, architecture, augmentation, and SGD’s optimization path constrain which of many possible functions is learned.
 
-### L1 regularization
+#### Common Mistakes
 
-L1 adds \(\lambda\lVert w\rVert_1\). Its geometry can drive some coefficients exactly to zero, yielding sparse solutions. That can help when a sparse linear representation is plausible, but correlated features may make its selected features unstable. L1 is not a universal feature-selection oracle.
+More capacity creates both the opportunity to fit more signal and the risk of fitting more noise; it does not guarantee overfitting.
+:::
+</details>
 
-### Choosing regularization strength
+### Q: What is inductive bias?
 
-Treat \(\lambda\) as a hyperparameter. Search a scale-appropriate range (often logarithmically), using validation data or cross-validation, while holding the split and metric fixed. Interpret its effect together with learning rate, training duration, model size, augmentation, and data quantity. A larger \(\lambda\) is not automatically safer; too much produces underfitting.
+**Short answer:** Inductive bias is the set of assumptions or preferences that lets a learner select one generalization beyond observed examples. It is unavoidable because many different functions can fit the same training data while predicting differently on unseen inputs.
 
-## Training procedures that regularize
+<details><summary><strong>Expand explanation</strong></summary>
 
-### Early stopping
+::: {.panel-tabset}
+#### Example
 
-Early stopping halts training when a validation criterion stops improving. In many settings it limits how far parameters can fit fine-grained training patterns. It can resemble a complexity constraint, but it is not identical to L2: its effect depends on optimizer, initialization, learning-rate schedule, and stopping rule. It also consumes validation information, so repeatedly tuning the stopping procedure can overfit validation.
+A CNN favors local, translation-related patterns; L2 favors smaller weights; a time split encodes that future information should not predict the past.
+:::
+</details>
 
-### Dropout and noise injection
+### Q: What is the bias–variance decomposition?
 
-Dropout randomly removes activations during training, forcing a network not to depend on a particular narrow path. At evaluation, the full network is used with the matching scaling convention. More broadly, noise injection can smooth the learned function, but too much noise destroys useful signal and must match plausible deployment variation.
+**Short answer:** Under squared-error regression, expected prediction error at a fixed input equals squared bias, variance from changing the training dataset, and irreducible noise. It separates systematic error, training-sample sensitivity, and noise that no predictor of \(X\) can remove.
 
-### Data augmentation
+<details><summary><strong>Expand explanation</strong></summary>
 
-Augmentation expands effective training variation by applying transformations that should preserve the target: modest image crops, for example, may preserve an object label. Its key assumption is label invariance. A transformation that changes the label, or is unlike production variation, can hurt rather than regularize.
+::: {.panel-tabset}
+#### Intuition
 
-### Implicit regularization
+Train the same learning procedure on many possible datasets. At one fixed \(x\), its predictions may have an average that misses the true regression function (bias), and may move around that average as the dataset changes (variance). Even the true regression function cannot predict fresh outcome noise.
 
-Architecture, SGD noise, initialization, optimization path, and finite training time can favor some solutions among many that fit training data. This is called implicit regularization. It is real but context-dependent; do not use it as an excuse to omit validation or explicit controls.
+#### Full Derivation
 
-## A diagnostic workflow
+Fix \(x\) and assume the regression setting
 
-When validation performance deteriorates while training loss improves:
+$$
+Y=f(x)+\varepsilon,\qquad E[\varepsilon\mid x]=0,\qquad \operatorname{Var}(\varepsilon\mid x)=\sigma^2.
+$$
 
-1. Confirm the metric, split, and preprocessing are correct; rule out leakage and evaluation bugs.
-2. Check the learning curves by epoch and compare training/validation distributions.
-3. Establish a simple baseline and reproduce the behavior across seeds.
-4. Consider capacity, data quantity/quality, augmentation validity, regularization, and stopping policy.
-5. Make one targeted change at a time, document it, and preserve a final untouched evaluation.
+Let \(\mathcal D\) be the random training dataset and \(\hat f_{\mathcal D}(x)\) the predictor learned from it. The expected squared prediction error is over both the random dataset and fresh test noise:
 
-This is evidence gathering, not a reflexive instruction to “add dropout.” A distribution shift or mislabeled validation set calls for a different remedy than classical overfitting.
+$$
+E_{\mathcal D,\varepsilon}\left[(Y-\hat f_{\mathcal D}(x))^2\right].
+$$
 
-## Example: small weights, with a caveat
+Substitute \(Y=f(x)+\varepsilon\):
 
-Imagine two standardized input features that are nearly duplicates. Unregularized linear regression can give them large opposite coefficients that cancel on the training set; small measurement changes then produce unstable predictions. L2 penalizes that fragile solution and favors a smoother allocation of weight. But small weights are only useful relative to feature scale and the model’s parameterization; rescaling a feature changes the numerical size of its coefficient without necessarily changing the underlying prediction.
+$$
+E_{\mathcal D,\varepsilon}\left[(f(x)-\hat f_{\mathcal D}(x)+\varepsilon)^2\right].
+$$
 
-## Follow-up questions
+Expanding gives
 
-1. How does adding data differ from increasing regularization?
-2. Why should a time-based task not usually use random cross-validation?
-3. Early stopping versus weight decay: what do they have in common, and what differs?
-4. Why can a validation score improve after many experiments even if no idea truly helped?
-5. When can data augmentation make a model worse?
-6. What evidence would distinguish overfitting from distribution shift?
+$$
+E_{\mathcal D,\varepsilon}\left[(f(x)-\hat f_{\mathcal D}(x))^2\right]
++2E_{\mathcal D,\varepsilon}\left[\varepsilon(f(x)-\hat f_{\mathcal D}(x))\right]
++E_\varepsilon[\varepsilon^2].
+$$
 
-## Common mistakes
+The middle term is zero. Conditional on \(x\) and \(\mathcal D\), \(f(x)-\hat f_{\mathcal D}(x)\) is fixed, while fresh test noise has mean zero and is independent of the learned predictor in the usual supervised setting. Thus
 
-- “The test set is the validation set at the end.” If it influenced choices, it is validation data.
-- “Regularization always makes weights small.” Some methods act on functions, activations, examples, or training trajectories instead.
-- “Training loss lower means the model is better.” It establishes fitting, not future performance.
-- “Cross-validation solves leakage.” It only helps if each fold follows the intended information boundary.
+$$
+E_{\mathcal D,\varepsilon}[\varepsilon(f(x)-\hat f_{\mathcal D}(x))]
+=E_{\mathcal D}\left[(f(x)-\hat f_{\mathcal D}(x))E_\varepsilon[\varepsilon\mid x,\mathcal D]\right]=0.
+$$
+
+Also \(E_\varepsilon[\varepsilon^2]=\sigma^2\). So it remains to decompose
+
+$$
+E_{\mathcal D}\left[(f(x)-\hat f_{\mathcal D}(x))^2\right].
+$$
+
+Define the average learned predictor
+
+$$
+\bar f(x)=E_{\mathcal D}[\hat f_{\mathcal D}(x)].
+$$
+
+Add and subtract \(\bar f(x)\):
+
+$$
+f(x)-\hat f_{\mathcal D}(x)
+=\big(f(x)-\bar f(x)\big)+\big(\bar f(x)-\hat f_{\mathcal D}(x)\big).
+$$
+
+Expanding its square and taking \(E_{\mathcal D}\) yields
+
+$$
+\begin{aligned}
+E_{\mathcal D}[(f-\hat f_{\mathcal D})^2]
+={}&(f-\bar f)^2 \\
+&+2(f-\bar f)E_{\mathcal D}[\bar f-\hat f_{\mathcal D}]\\
+&+E_{\mathcal D}[(\bar f-\hat f_{\mathcal D})^2].
+\end{aligned}
+$$
+
+All quantities in this display are evaluated at \(x\). The cross-term vanishes because
+
+$$
+E_{\mathcal D}[\bar f(x)-\hat f_{\mathcal D}(x)]
+=\bar f(x)-E_{\mathcal D}[\hat f_{\mathcal D}(x)]=0.
+$$
+
+Now identify
+
+$$
+\operatorname{Bias}(x)=E_{\mathcal D}[\hat f_{\mathcal D}(x)]-f(x)=\bar f(x)-f(x),
+$$
+
+and
+
+$$
+\operatorname{Var}_{\mathcal D}(\hat f_{\mathcal D}(x))
+=E_{\mathcal D}\left[(\hat f_{\mathcal D}(x)-\bar f(x))^2\right].
+$$
+
+Therefore,
+
+$$
+\boxed{
+E_{\mathcal D,\varepsilon}\left[(Y-\hat f_{\mathcal D}(x))^2\right]
+=\operatorname{Bias}(x)^2
++\operatorname{Var}_{\mathcal D}(\hat f_{\mathcal D}(x))
++\sigma^2
+}.
+$$
+
+This is pointwise, at one \(x\). Expected generalization error additionally averages over a random input \(X\sim p(x)\):
+
+$$
+E_X\left[\operatorname{Bias}(X)^2
++\operatorname{Var}_{\mathcal D}(\hat f_{\mathcal D}(X))
++\sigma^2\right].
+$$
+
+#### Interpretation
+
+- **High bias:** the average learned predictor is systematically wrong, so it underfits useful structure.
+- **High variance:** changing the training dataset changes the fitted predictor substantially. This is variation across datasets at a fixed \(x\), not variation of predictions across different \(x\) values.
+- **Irreducible noise:** error that remains even if we knew the true regression function \(f\).
+
+More representative data often lowers variance. Regularization often lowers variance by constraining solutions, but can raise bias by suppressing genuine signal. Increasing model complexity can reduce bias or increase variance, but neither outcome is an absolute rule.
+
+#### Example
+
+Imagine fitting a high-degree polynomial to many small samples from the same smooth curve. At a fixed \(x\), the fitted value may vary sharply from sample to sample: high variance. A line fit to the same curve may give nearly the same wrong value every time: high bias.
+
+#### Follow-ups
+
+- Which expectations are random here? \(E_{\mathcal D}\) averages over possible training sets; \(E_\varepsilon\) averages fresh test noise; \(E_X\) averages test inputs.
+- What assumptions are required? Squared-error loss; a regression setting; zero-mean noise conditional on \(x\); a random training dataset; and fresh test noise independent of the learned model/training sample in the usual supervised setup.
+- Does this exact three-term formula hold for every loss? No. Bias–variance ideas are broader, but this simple algebraic decomposition is specifically tied to squared loss.
+:::
+</details>
+
+## Train, Validation, and Test
+
+### Q: Why do we need a validation set?
+
+**Short answer:** A validation set supports choices outside direct parameter fitting, such as hyperparameters, architecture, features, stopping points, and thresholds. It estimates how those development choices may perform beyond the training examples.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Training data fits weights; validation data compares candidate training procedures. Those are distinct roles.
+
+#### Follow-ups
+
+- Does validation update weights during ordinary training?
+- How would you use it to choose lambda?
+:::
+</details>
+
+### Q: Why do we need a separate test set? Why can’t we use it for model selection?
+
+**Short answer:** The test set is the final audit of the full development process. If its result guides architecture or hyperparameter choices, it becomes validation data and the reported score becomes optimistic because the process has adapted to that finite sample.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Common Mistakes
+
+“Test it one more time” is not harmless if the result changes a decision. Treat the test result as final unless you obtain fresh data.
+:::
+</details>
+
+### Q: Can you overfit to the validation set?
+
+**Short answer:** Yes. Repeatedly trying ideas, inspecting validation scores, and retaining winners adapts the development process to validation noise. Validation prevents direct fitting of training examples; it does not make unlimited adaptive experimentation unbiased.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Follow-ups
+
+- **What does validation actually do?** It evaluates candidate choices; it does not directly constrain the learned weights.
+- **Why not tune until it improves?** Each adaptive decision raises the chance of selecting noise.
+- **What helps?** Log experiments, limit search, use fresh holdouts or nested CV where appropriate, and repeat key results across seeds.
+:::
+</details>
+
+### Q: When should you use cross-validation? When is it impractical?
+
+**Short answer:** Use cross-validation when data are limited, examples are approximately exchangeable, and repeated training is affordable. It is impractical for expensive models and inappropriate when folds violate time, group, or information boundaries.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Example
+
+Use time-based splits for forecasting and group-aware splits for users or patients. Random folds can leak information that will not exist at deployment.
+:::
+</details>
+
+## Regularization
+
+### Q: What is regularization, and why does it reduce overfitting?
+
+**Short answer:** Regularization is a constraint or training choice that favors solutions expected to generalize, rather than merely minimizing training error. It reduces overfitting by making arbitrary training-specific patterns harder or less attractive to fit.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+It can act through penalties, architecture, augmentation, stochastic training, or early stopping. Each method encodes a preference about which solutions should be trusted.
+
+#### Follow-ups
+
+- What does it change during training?
+- How does it alter effective capacity?
+:::
+</details>
+
+### Q: Why do we need regularization if we already have a validation set?
+
+**Short answer:** Validation selects among training procedures, whereas regularization changes the learned model or training trajectory. Validation can choose the type and amount of regularization, but it does not itself prevent a flexible model from memorizing training-specific patterns.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Follow-ups
+
+- Can selecting regularization overfit validation? Yes, after enough adaptive searches.
+- Why not simply stop when validation loss rises? That is early stopping, one regularizer with its own noise and tuning issues.
+:::
+</details>
+
+### Q: How do you know regularization is too strong? Can it hurt test performance?
+
+**Short answer:** If training loss rises and validation performance is also poor, especially with a small gap, regularization may be causing underfitting. It can hurt test performance by suppressing real signal or enforcing invalid invariances, so its strength must be validated.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Example
+
+An augmentation that removes the object defining a class is a regularization assumption that destroys useful signal.
+:::
+</details>
+
+## L2, L1, and Weight Decay
+
+### Q: What is L2 regularization, and why can smaller weights help generalization?
+
+**Short answer:** L2 adds a penalty proportional to squared weight magnitude, favoring less sensitive solutions in many parameterizations. Smaller weights can reduce reliance on brittle feature combinations, although their meaning always depends on feature scale and parameterization.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Mathematical View
+
+L2 adds \(\lambda\lVert w\rVert_2^2\) to the objective. For standardized linear features, large coefficients make small input changes create large prediction changes.
+
+#### Deep Dive
+
+The penalty adds \(2\lambda w\) to the gradient, pulling each weight toward zero; large weights feel a stronger pull.
+
+#### Common Mistakes
+
+Rescaling a feature changes coefficient magnitude without necessarily changing the underlying prediction function.
+:::
+</details>
+
+### Q: Is L2 regularization the same as weight decay? How do you choose lambda?
+
+**Short answer:** L2 and weight decay are equivalent in simple SGD under matching conventions, but not generally in adaptive optimizers: decoupled weight decay shrinks weights separately from adaptive gradients. Choose lambda on validation data, usually over a logarithmic range; too high underfits and too low leaves excess sensitivity to training noise.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Deep Dive
+
+In Adam-like optimizers, coupled L2 passes the penalty through adaptive scaling, while decoupled decay does not. This motivates the AdamW distinction.
+
+#### Follow-ups
+
+- Which other hyperparameters change effective shrinkage?
+- Why can a broad lambda search overfit validation?
+
+#### Mathematical View
+
+With a compatible likelihood, a zero-mean Gaussian weight prior gives the MAP interpretation of L2 regularization.
+:::
+</details>
+
+### Q: What is the practical difference between L1 and L2 regularization?
+
+**Short answer:** L1 penalizes absolute weight values and can set parameters exactly to zero, producing sparse solutions. L2 smoothly shrinks all weights and usually keeps them nonzero, often making it more stable for correlated features.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Mathematical View
+
+L1 has a sharp corner at zero, so zero is optimal for a range of gradients. Its nondifferentiability there uses subgradients or proximal methods.
+
+#### Example
+
+With correlated predictors, L1 may select one and drop another, making the chosen subset unstable across samples.
+
+#### Follow-ups
+
+- When is sparse feature selection valuable?
+- When would elastic net be preferable?
+:::
+</details>
+
+## Training Procedures that Regularize
+
+### Q: Why is early stopping a form of regularization? How do you decide when to stop?
+
+**Short answer:** Training longer can fit progressively finer training-specific patterns, so stopping when held-out performance stops improving limits effective complexity. Predefine a validation metric, evaluation cadence, patience window, and checkpoint rule rather than repeatedly tuning the stopping decision.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Deep Dive
+
+Early stopping and L2 can be used independently or together: L2 changes the objective continuously, while early stopping limits optimization time based on held-out behavior.
+
+#### Common Mistakes
+
+Increasing validation loss while training loss falls can be overfitting, but first rule out split errors, leakage, preprocessing bugs, and distribution shift.
+:::
+</details>
+
+### Q: What is dropout, and what happens at inference time?
+
+**Short answer:** Dropout randomly masks activations during training, discouraging reliance on narrow co-adapted paths and sometimes improving generalization. It is normally disabled at inference, with the matching scaling convention so predictions are deterministic.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Deep Dive
+
+Dropout injects activation-level stochasticity; weight decay penalizes parameters directly. They can be combined but serve different roles.
+
+#### Common Mistakes
+
+Dropout is not universally helpful when scale, architecture, augmentation, or other regularization already controls overfitting.
+:::
+</details>
+
+### Q: Why do data augmentation and noise injection improve generalization? Can they hurt?
+
+**Short answer:** They encourage robustness to variations that should not change the target, reducing dependence on one exact training view. They hurt when the variation changes the label, destroys important signal, or does not resemble plausible deployment noise.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Example
+
+A modest crop may preserve an object label; a crop that removes the object does not. The key assumption is label invariance.
+
+#### Follow-ups
+
+- What nuisance variation exists in production?
+- How would you test whether an augmentation is valid?
+:::
+</details>
+
+## Regularization Strategy
+
+### Q: If your model is overfitting, what would you try first?
+
+**Short answer:** First validate the diagnosis by checking split design, leakage, labels, learning curves, and deployment mismatch. Then establish a baseline and test targeted changes—often more representative data, valid augmentation, appropriate weight decay, or early stopping—one controlled factor at a time.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Follow-ups
+
+- **More data or stronger regularization?** Representative data usually reduces variance without discarding signal; regularization helps when data are limited or capacity is excessive.
+- **What counts as evidence?** Seek repeatable improvement on an untouched or fresh holdout, without regression on the product-relevant metric.
+
+#### Common Mistakes
+
+“Add regularization” is not a diagnosis. Test a specific hypothesis against a baseline.
+:::
+</details>
+
+## Concept Reference
+
+Use @sec-math-reference for recurring notation and @sec-question-bank for retrieval practice.

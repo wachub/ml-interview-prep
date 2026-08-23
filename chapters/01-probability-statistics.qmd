@@ -1,132 +1,405 @@
 # Probability, Statistics, and Learning Objectives
 
-Probability is useful in interviews when it explains a modeling decision: what uncertainty means, why a loss is appropriate, or what an estimate assumes. This chapter is not a statistics course; it is a working vocabulary for reasoning about ML objectives.
+This is the probability and statistics needed to reason through ML interviews: precise working definitions, small calculations, and the modeling consequences that follow from them. It intentionally stops before measure theory.
 
-## Random variables and distributions
+## Random Variables and Distributions
 
-A random variable maps an uncertain outcome to a number. Its distribution describes which values are plausible and how likely they are. For a discrete variable we use a probability mass function \(p(x)\); for a continuous variable, a density \(p(x)\). A density is not itself a probability: probability over an interval is its integral.
+### Q: What is a random variable?
 
-### Expectation and variance
-
-The expectation \(\mathbb{E}[X]\) is a distribution-weighted average. Variance, \(\operatorname{Var}(X)=\mathbb{E}[(X-\mathbb{E}[X])^2]\), measures spread around that average. They answer different questions: a model can have an unbiased prediction on average while still being highly variable.
-
-Covariance measures whether two variables vary together:
+**Short answer:** A random variable is a function
 
 $$
-\operatorname{Cov}(X,Y)=\mathbb{E}[(X-\mathbb{E}X)(Y-\mathbb{E}Y)].
-$$ {#eq-covariance}
-
-Zero covariance does not generally imply independence. It does for some special distribution families, such as jointly Gaussian variables.
-
-### Conditional probability and Bayes' rule
-
-Conditional probability updates a probability after observing information: \(p(y\mid x)\). Bayes' rule reverses a conditional:
-
+X:\Omega\to\mathbb R
 $$
-p(\theta\mid D)=\frac{p(D\mid\theta)p(\theta)}{p(D)}.
-$$ {#eq-bayes}
 
-Here \(p(\theta)\) is a prior belief, \(p(D\mid\theta)\) is how compatible the observed data are with parameters \(\theta\), and \(p(\theta\mid D)\) is the updated belief. The denominator normalizes across all possible parameters; when optimizing with respect to \(\theta\), it is constant.
+that assigns a real number to each outcome in the sample space \(\Omega\). It lets us represent an uncertain outcome numerically and then describe its distribution.
 
-::: {.callout-note}
-## Interview habit
+<details><summary><strong>Expand explanation</strong></summary>
 
-When someone says “probability,” ask: probability conditional on *what information*, and under *which distributional assumption*? Making those conditions explicit often reveals the real modeling choice.
+::: {.panel-tabset}
+#### Intuition
+
+The random variable is the rule; its realized value is the observation. For a coin toss, “number of heads” is a random variable, while 1 is a possible observed value.
+
+#### ML Connection
+
+A class label, residual, click indicator, and model output can each be modeled as random variables. The appropriate distribution depends on the kind of target.
+
+#### Note
+
+In a fully measure-theoretic treatment, a random variable is also required to be measurable. That detail is not usually needed for ML interviews.
 :::
+</details>
 
-## From assumptions to objectives
+### Q: A fair coin is tossed twice. Let \(X\) be the number of heads. Define \(X\) and find its distribution.
 
-### Likelihood, MLE, and MAP
-
-Given parameters \(\theta\), the likelihood treats the data as fixed and asks how plausible they are under the model: \(p(D\mid\theta)\). Maximum likelihood estimation (MLE) chooses
-
-$$
-\hat\theta_{\mathrm{MLE}}=\arg\max_\theta p(D\mid\theta).
-$$
-
-For independently observed examples, products of probabilities become sums of log-probabilities. This is numerically stable and easier to optimize:
+**Short answer:**
 
 $$
-\arg\max_\theta \sum_{i=1}^n \log p(y_i\mid x_i;\theta).
-$$ {#eq-log-likelihood}
-
-Maximum a posteriori (MAP) estimation adds a prior:
-
-$$
-\hat\theta_{\mathrm{MAP}}=\arg\max_\theta \big[\log p(D\mid\theta)+\log p(\theta)\big].
+\Omega=\{HH,HT,TH,TT\},
 $$
 
-The prior encodes a preference before seeing this dataset. It can stabilize an underdetermined problem, but it is still an assumption—not a free improvement.
-
-### Why squared error and cross entropy appear
-
-Loss functions are often negative log-likelihoods under an output-noise model.
-
-- If \(y\mid x\) is Gaussian with fixed variance and mean \(f_\theta(x)\), minimizing negative log-likelihood is equivalent to minimizing squared error. Large residuals receive a quadratic penalty.
-- If a binary label is Bernoulli with predicted probability \(p_\theta(x)\), negative log-likelihood is binary cross entropy:
-
-  $$
-  -\big[y\log p_\theta(x)+(1-y)\log(1-p_\theta(x))\big].
-  $$
-
-- For a one-hot multiclass target \(y\) and softmax probabilities \(p\), cross entropy is \(-\sum_k y_k\log p_k\). It rewards assigning high probability to the observed class and penalizes confident wrong predictions strongly.
-
-Cross entropy makes sense when the model is meant to represent a predictive distribution and we want a *proper* scoring rule: in expectation, the true distribution is the best prediction. Accuracy does not have this property for probability estimates; it ignores whether a correct prediction was assigned 0.51 or 0.99.
-
-### Entropy and KL divergence
-
-Entropy is the uncertainty in a distribution:
-
 $$
-H(p)=-\sum_x p(x)\log p(x).
+X(HH)=2,\quad X(HT)=X(TH)=1,\quad X(TT)=0.
 $$
 
-Cross entropy between a target distribution \(p\) and a model \(q\) is \(H(p,q)=-\sum_x p(x)\log q(x)\). It decomposes as
+Therefore,
 
 $$
-H(p,q)=H(p)+D_{\mathrm{KL}}(p\Vert q),
-$$ {#eq-cross-entropy-kl}
-
-where \(D_{\mathrm{KL}}(p\Vert q)\) is nonnegative and is zero only when the distributions agree almost everywhere. Since \(H(p)\) does not depend on the model, minimizing expected cross entropy minimizes the KL divergence from data distribution to model distribution. KL is directional: swapping \(p\) and \(q\) changes what mismatch is costly.
-
-## Estimation and uncertainty
-
-### Samples are not the population
-
-An empirical mean is an estimate of a population expectation. It varies with the sampled dataset. As the sample size grows, its variance typically falls, but a large sample does not correct systematic sampling bias or a mismatched target population.
-
-In an interview, distinguish:
-
-- **Estimator bias:** the expected estimate differs from the quantity it targets.
-- **Estimator variance:** the estimate changes substantially across samples.
-- **Model bias and variance:** sources of prediction error from restricted assumptions and sensitivity to training data. These are related ideas, but not interchangeable.
-
-### Correlation, causation, and leakage
-
-Correlation can be predictive without being causal. That can be perfectly acceptable for a stable prediction task, but it becomes dangerous when the correlation comes from post-outcome information, a future feature, or a process that changes at deployment. Before trusting a striking feature, ask when it becomes available and whether the training and serving pipelines construct it identically.
-
-## Worked example: regularization as a prior
-
-Suppose a linear regression model assumes \(y=w^\top x+\epsilon\), with Gaussian noise. Squared-error minimization is MLE. If we further place a zero-mean Gaussian prior on weights, \(w\sim\mathcal N(0,\tau^2I)\), MAP estimation becomes
-
-$$
-\min_w \sum_i (y_i-w^\top x_i)^2+\lambda\lVert w\rVert_2^2.
+P(X=0)=\frac14,\qquad P(X=1)=\frac12,\qquad P(X=2)=\frac14.
 $$
 
-The L2 term is not magic: it says, before data, smaller weights are more plausible. The likelihood may still support a large weight when data provide enough evidence. This connection will be used in [Chapter 2](02-generalization-regularization.qmd).
+<details><summary><strong>Expand explanation</strong></summary>
 
-## Key interview questions
+::: {.panel-tabset}
+#### Intuition
 
-1. Why does MSE correspond to a Gaussian assumption, and when would that assumption be awkward?
-2. Why is cross entropy usually preferred to accuracy for training a classifier?
-3. What is the difference between a probability density and a probability?
-4. How does MAP differ from MLE, and when does the difference matter most?
-5. Is zero covariance enough to claim independence?
-6. What assumptions are hidden when a loss is chosen?
+Several outcomes can map to the same random-variable value: both \(HT\) and \(TH\) map to 1. The distribution groups sample-space outcomes by their assigned number.
 
-## Common mistakes
+#### Follow-ups
 
-- Calling likelihood “the probability of the parameters.” In frequentist language it is a function of parameters with the data fixed; a posterior is a distribution over parameters.
-- Treating entropy as merely “randomness.” It depends on a specified distribution and logarithm base.
-- Saying L2 is always Bayesian. The MAP interpretation needs a compatible likelihood, prior, and scaling; L2 can also be used as an optimization or complexity preference.
-- Equating a good probabilistic loss with a useful product metric. The operating threshold and decision costs can still make the deployed system poor.
+- Is \(X\) Bernoulli? No; it is Binomial with \(n=2\), \(p=1/2\).
+- What values can \(X\) take? The support is \(\{0,1,2\}\).
+:::
+</details>
+
+### Q: When would you use Bernoulli, Binomial, or Gaussian modeling?
+
+**Short answer:** Use Bernoulli for one binary event, such as click/no click; Binomial for the count of successes in fixed independent Bernoulli trials; and Gaussian modeling for continuous residuals that are plausibly symmetric around zero with roughly constant spread.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### ML Connection
+
+Binary logistic regression uses a Bernoulli likelihood. Linear regression with MSE is commonly interpreted through Gaussian conditional noise.
+
+#### Common Mistakes
+
+Do not use a Gaussian merely because a variable is numerical. Check for bounds, skew, heavy tails, and changing variance.
+:::
+</details>
+
+## Expectation and Variance
+
+### Q: What is expectation?
+
+**Short answer:** For a discrete random variable, expectation is its probability-weighted average:
+
+$$
+E[X]=\sum_x xP(X=x).
+$$
+
+For a continuous random variable with density \(f_X\), the analogue is \(E[X]=\int x f_X(x)\,dx\), when the integral exists.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Expectation is the average value over repeated draws, weighted by how often each value occurs. It need not be a value that is actually observed.
+
+#### ML Connection
+
+Many learning objectives minimize an expected loss; empirical risk is the sample-based approximation used in practice.
+:::
+</details>
+
+### Q: A fair six-sided die is rolled once. What are \(E[X]\) and \(E[X^2]\)?
+
+**Short answer:**
+
+$$
+E[X]=\frac{1+2+3+4+5+6}{6}=3.5,
+$$
+
+and
+
+$$
+E[X^2]=\frac{1^2+2^2+3^2+4^2+5^2+6^2}{6}=\frac{91}{6}.
+$$
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Common Mistakes
+
+\(E[X^2]\) is not \((E[X])^2\). The difference between them is central to variance.
+:::
+</details>
+
+### Q: What is variance? State a useful equivalent identity.
+
+**Short answer:** Variance measures squared spread around the mean:
+
+$$
+\operatorname{Var}(X)=E[(X-E[X])^2].
+$$
+
+The useful identity is
+
+$$
+\operatorname{Var}(X)=E[X^2]-E[X]^2.
+$$
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Squaring prevents positive and negative deviations from cancelling and gives larger deviations more weight. Standard deviation is the square root of variance and has the original units.
+
+#### ML Connection
+
+Variance distinguishes an estimate that is stable across samples from one that changes greatly when the training set changes.
+:::
+</details>
+
+### Q: Using the fair-die result, compute \(\operatorname{Var}(X)\).
+
+**Short answer:** From \(E[X]=3.5\) and \(E[X^2]=91/6\),
+
+$$
+\operatorname{Var}(X)=\frac{91}{6}-(3.5)^2=\frac{35}{12}.
+$$
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Mathematical View
+
+Using \(E[X^2]-E[X]^2\) avoids calculating six squared deviations directly. Both methods give the same answer.
+
+#### Follow-ups
+
+- Why is variance always nonnegative?
+- How is variance different from mean squared prediction error?
+:::
+</details>
+
+## Conditional Probability and Independence
+
+### Q: What is conditional probability?
+
+**Short answer:** For \(P(B)>0\), conditional probability is
+
+$$
+P(A\mid B)=\frac{P(A\cap B)}{P(B)}.
+$$
+
+It is the probability of \(A\) after restricting attention to outcomes where \(B\) occurred.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Example
+
+From a 52-card deck, given that a drawn card is a face card, the probability it is a king is \(4/12=1/3\), not \(4/52\).
+
+#### ML Connection
+
+Supervised probabilistic classifiers estimate quantities such as \(P(Y\mid X)\), the class probability after observing features.
+:::
+</details>
+
+### Q: What does independence mean? Give an application.
+
+**Short answer:** Events \(A\) and \(B\) are independent when
+
+$$
+P(A\cap B)=P(A)P(B).
+$$
+
+For random variables, independence means knowing one does not change the distribution of the other. For two fair coin tosses, the first-toss outcome and second-toss outcome are independent.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Example
+
+Let \(A\) be “first toss is heads” and \(B\) be “second toss is heads.” Then \(P(A\cap B)=1/4=(1/2)(1/2)\).
+
+#### Common Mistakes
+
+Mutually exclusive nonzero-probability events are not independent: if one happens, the other cannot.
+:::
+</details>
+
+## Covariance and Correlation
+
+### Q: What are covariance and correlation?
+
+**Short answer:** Covariance measures whether two variables tend to deviate from their means in the same direction:
+
+$$
+\operatorname{Cov}(X,Y)=E[(X-E[X])(Y-E[Y])].
+$$
+
+Correlation standardizes it:
+
+$$
+\rho_{X,Y}=\frac{\operatorname{Cov}(X,Y)}{\sigma_X\sigma_Y},
+$$
+
+when both standard deviations are nonzero.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Positive covariance means above-average values tend to occur together; negative covariance means one tends to be below average when the other is above. Correlation is unitless.
+
+#### Common Mistakes
+
+Neither covariance nor correlation establishes causation.
+:::
+</details>
+
+### Q: Does zero covariance imply independence?
+
+**Short answer:** No. Zero covariance means there is no linear association captured by covariance, but variables can still have a nonlinear dependence. It does imply independence only under additional conditions, such as joint Gaussianity.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Example
+
+If \(X\) is symmetric around zero and \(Y=X^2\), then \(Y\) is completely determined by \(X\) but \(\operatorname{Cov}(X,Y)\) can be zero.
+
+#### Follow-ups
+
+- Why can correlated input features still be useful for prediction?
+- What makes correlation a possible leakage warning?
+:::
+</details>
+
+## Likelihood and Estimation
+
+### Q: What are likelihood and maximum likelihood estimation?
+
+**Short answer:** Given observed data \(x_1,\dots,x_n\) and parameter \(\theta\), likelihood is
+
+$$
+L(\theta)=P(x_1,\dots,x_n\mid\theta)
+$$
+
+for discrete data, or the corresponding density for continuous data. MLE chooses
+
+$$
+\hat\theta_{\mathrm{MLE}}=\arg\max_\theta L(\theta).
+$$
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Probability varies possible data with parameters fixed; likelihood fixes the data and compares parameter settings.
+
+#### ML Connection
+
+Choosing a likelihood family chooses a loss after taking negative log-likelihood.
+:::
+</details>
+
+### Q: A coin is tossed 10 times and lands heads 7 times. What is the MLE of its probability of heads?
+
+**Short answer:** If \(p\) is the head probability, the Binomial likelihood is proportional to \(p^7(1-p)^3\). Its maximizer is
+
+$$
+\hat p_{\mathrm{MLE}}=\frac{7}{10}=0.7.
+$$
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Mathematical View
+
+Maximizing \(7\log p+3\log(1-p)\) gives \(7/p-3/(1-p)=0\), hence \(p=0.7\).
+
+#### Follow-ups
+
+- Why maximize log-likelihood rather than likelihood?
+- What changes with a Beta prior on \(p\)?
+:::
+</details>
+
+### Q: Why maximize log-likelihood? What is MAP, and how does it relate to regularization?
+
+**Short answer:** Logarithms preserve the maximizing parameter, turn products into sums, and avoid numerical underflow. MAP chooses
+
+$$
+\hat\theta_{\mathrm{MAP}}=\arg\max_\theta P(\theta\mid D),
+$$
+
+so it combines likelihood with a prior; many regularizers are negative log-priors.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Mathematical View
+
+MAP maximizes \(\log P(D\mid\theta)+\log P(\theta)\). A zero-mean Gaussian prior on weights gives an L2 penalty under compatible scaling.
+
+#### Common Mistakes
+
+MAP selects one posterior mode. It is not the same as fully Bayesian prediction, which averages over posterior uncertainty.
+:::
+</details>
+
+## Losses and Information Theory
+
+### Q: Why does MSE arise from Gaussian noise?
+
+**Short answer:** If \(Y\mid X=x\) is modeled as a Gaussian with mean \(f_\theta(x)\) and fixed variance, its negative log-likelihood is proportional to squared error. Thus minimizing MSE is maximum likelihood under that conditional-noise assumption.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Mathematical View
+
+$$-log P(D\mid\theta)=\text{constant}+\frac{1}{2\sigma^2}\sum_i(y_i-f_\theta(x_i))^2.$$
+
+#### Common Mistakes
+
+MSE is sensitive to outliers, so Gaussian noise is not a good fit for every regression task.
+:::
+</details>
+
+### Q: What are entropy, cross-entropy, and KL divergence?
+
+**Short answer:** For a discrete distribution \(p\), entropy is
+
+$$
+H(X)=-\sum_xp(x)\log p(x).
+$$
+
+Cross-entropy is \(H(p,q)=-\sum_xp(x)\log q(x)\), and KL divergence is \(D_{\mathrm{KL}}(p\Vert q)=\sum_xp(x)\log\frac{p(x)}{q(x)}\). They quantify uncertainty, prediction surprise, and distribution mismatch.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Entropy is average surprise under \(p\). Cross-entropy evaluates model \(q\) on outcomes from \(p\). KL is the excess surprise caused by using \(q\) instead of \(p\).
+
+#### Mathematical View
+
+$$H(p,q)=H(p)+D_{\mathrm{KL}}(p\Vert q).$$
+
+Minimizing expected cross-entropy therefore minimizes this KL mismatch.
+
+#### ML Connection
+
+For one-hot labels, cross-entropy is negative log probability of the correct class. It is preferred to MSE because it follows from the categorical likelihood and penalizes confident mistakes strongly.
+
+#### Common Mistakes
+
+KL is not a distance: it is asymmetric and does not satisfy the triangle inequality. Reversing \(p\) and \(q\) changes what mismatch is costly.
+:::
+</details>
+
+## Concept Reference
+
+Use @sec-math-reference for recurring notation and @sec-question-bank for retrieval practice.
