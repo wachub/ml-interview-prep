@@ -4,9 +4,9 @@ Only notation and results used repeatedly across the book belong here.
 
 ## Notation
 
-- \(x\): input or feature vector; \(y\): target; \(\theta\): model parameters.
-- \(\mathbb E[X]\): expectation; \(\operatorname{Var}(X)\): variance; \(\operatorname{Cov}(X,Y)\): covariance.
-- \(p\) and \(q\): probability distributions; \(D\): observed dataset.
+- $x$: input or feature vector; $y$: target; $\theta$: model parameters.
+- $\mathbb E[X]$: expectation; $\operatorname{Var}(X)$: variance; $\operatorname{Cov}(X,Y)$: covariance.
+- $p$ and $q$: probability distributions; $D$: observed dataset.
 
 ## Frequently used objectives
 

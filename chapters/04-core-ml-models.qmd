@@ -4,7 +4,7 @@ This chapter is a compact comparison map for classical models: their assumptions
 
 ## Linear and logistic regression
 
-### Q: What is multicollinearity? {#q-multicollinearity}
+### Q: What is multicollinearity? {#q-multicollinearity .qa-card}
 
 **Short answer:** Multicollinearity occurs when one or more predictor variables are approximately linear combinations of others. In linear regression this makes the coefficients poorly identified: predictions may remain reasonable, while individual coefficient estimates can become highly unstable.
 
@@ -89,7 +89,7 @@ A large condition number means some directions are much less identified than oth
 :::
 </details>
 
-### Q: Why does multicollinearity increase the variance of regression coefficients? {#q-multicollinearity-coefficient-variance}
+### Q: Why does multicollinearity increase the variance of regression coefficients? {#q-multicollinearity-coefficient-variance .qa-card}
 
 **Short answer:** When predictors are nearly linearly dependent, $X^\top X$ has very small eigenvalues. Its inverse therefore has very large eigenvalues in those directions, and because $\operatorname{Var}(\hat\beta\mid X)=\sigma^2(X^\top X)^{-1}$, small changes in the data can produce large changes in the estimated coefficients.
 
@@ -174,7 +174,7 @@ The formulas condition on the observed design $X$ and vary the outcome noise, wh
 :::
 </details>
 
-### Q: Does multicollinearity necessarily hurt prediction accuracy? {#q-multicollinearity-prediction}
+### Q: Does multicollinearity necessarily hurt prediction accuracy? {#q-multicollinearity-prediction .qa-card}
 
 **Short answer:** No. Multicollinearity can make individual coefficients unstable while predictions remain accurate, especially when test data preserve the same feature relationships as training data. It becomes more dangerous under distribution shift, extrapolation, small samples, or sufficiently large estimation variance.
 
@@ -226,7 +226,7 @@ Do not remove a variable solely because it is correlated with another. For predi
 :::
 </details>
 
-### Q: How would you detect multicollinearity? {#q-detect-multicollinearity}
+### Q: How would you detect multicollinearity? {#q-detect-multicollinearity .qa-card}
 
 **Short answer:** I would combine domain inspection with pairwise correlations, per-feature VIFs, and singular values or a condition number computed after appropriate scaling. Correlations find simple pairs, VIF detects whether one feature is explained by all the others, and the SVD directly reveals weak directions in the full design matrix.
 
@@ -317,7 +317,7 @@ The corresponding right singular vector identifies the weak combination; an exac
 :::
 </details>
 
-### Q: What would you do if you discover multicollinearity? {#q-handle-multicollinearity}
+### Q: What would you do if you discover multicollinearity? {#q-handle-multicollinearity .qa-card}
 
 **Short answer:** I would first decide whether the goal is prediction, coefficient interpretation, or causal estimation. I might remove or combine genuinely redundant variables, collect data with more independent variation, use PCA, or apply ridge regression for stability. I would not automatically delete correlated features when validated prediction is already reliable.
 
@@ -420,7 +420,7 @@ LASSO can produce a sparse model, but among predictors carrying similar informat
 
 ## Bagging, boosting, and gradient boosting
 
-### Q: What is boosting? {#q-boosting}
+### Q: What is boosting? {#q-boosting .qa-card}
 
 **Short answer:** Boosting builds a strong predictor by adding weak learners sequentially. Each new learner responds to errors made by the current ensemble—through reweighted examples, residuals, or loss gradients—and the final prediction combines all learners additively.
 
@@ -473,7 +473,7 @@ Suppose decision stumps are the weak learners. One stump may separate most posit
 :::
 </details>
 
-### Q: Bagging vs boosting? {#q-bagging-vs-boosting}
+### Q: Bagging vs boosting? {#q-bagging-vs-boosting .qa-card}
 
 **Short answer:** Bagging fits perturbed versions of a base learner largely independently and averages their predictions, which primarily stabilizes a high-variance learner. Boosting fits learners sequentially, with each learner responding to the current ensemble's errors. Bagging is easier to parallelize and often more robust to noise; boosting can remove systematic error more aggressively but is usually more sensitive to data quality and tuning.
 
@@ -509,7 +509,7 @@ These are tendencies, not strict bias-versus-variance laws. Bagging can affect b
 :::
 </details>
 
-### Q: How does AdaBoost work? {#q-adaboost-algorithm}
+### Q: How does AdaBoost work? {#q-adaboost-algorithm .qa-card}
 
 **Short answer:** AdaBoost maintains a distribution of weights over the training examples. At each round it fits a weak classifier to minimize weighted error, gives that classifier a vote based on how much better it is than chance, and increases the relative weight of its mistakes. The final classifier is the sign of the weighted vote across all learners.
 
@@ -543,7 +543,7 @@ $$
 =
 \frac{
 \sum_{i=1}^{n}w_i^{(m)}
-\mathbf 1\!\left\{y_i\ne h_m(x_i)\right\}
+\mathbf{1}\!\left\{y_i\ne h_m(x_i)\right\}
 }{
 \sum_{i=1}^{n}w_i^{(m)}
 }.
@@ -626,7 +626,7 @@ A correct example is multiplied by $e^{-0.549}\approx 0.577$, while a misclassif
 :::
 </details>
 
-### Q: Why does AdaBoost put more weight on misclassified examples? {#q-adaboost-misclassified-weights}
+### Q: Why does AdaBoost put more weight on misclassified examples? {#q-adaboost-misclassified-weights .qa-card}
 
 **Short answer:** AdaBoost updates each weight by $\exp(-\alpha_m y_i h_m(x_i))$. For a correct prediction the signed product is $+1$, giving the multiplier $e^{-\alpha_m}$; for a mistake it is $-1$, giving $e^{\alpha_m}$. When the learner is better than chance, $\alpha_m>0$, so mistakes become relatively more important to the next learner.
 
@@ -709,7 +709,7 @@ The mechanism is useful when difficult examples contain learnable structure. It 
 :::
 </details>
 
-### Q: Where does AdaBoost's alpha formula come from? {#q-adaboost-alpha}
+### Q: Where does AdaBoost's alpha formula come from? {#q-adaboost-alpha .qa-card}
 
 **Short answer:** With the new weak classifier fixed, AdaBoost chooses its vote by minimizing the ensemble's exponential loss along that one direction. Splitting the objective into correctly and incorrectly classified examples and solving the resulting one-dimensional optimization gives $\alpha=\tfrac12\log((1-\epsilon)/\epsilon)$.
 
@@ -866,7 +866,7 @@ The broader relationship between probabilistic assumptions, surrogate training l
 :::
 </details>
 
-### Q: Why does AdaBoost work even with weak learners? {#q-adaboost-weak-learners}
+### Q: Why does AdaBoost work even with weak learners? {#q-adaboost-weak-learners .qa-card}
 
 **Short answer:** If each learner is slightly better than random on the current reweighted data, it receives a positive vote and reduces the stagewise exponential objective. Later learners focus on different mistakes, and their weighted sum can build increasingly positive classification margins even though each component is simple.
 
@@ -929,7 +929,7 @@ With the usual initialization, one can also show
 
 $$
 \frac1n\sum_{i=1}^{n}
-\mathbf 1\{y_iF_M(x_i)\le0\}
+\mathbf{1}\{y_iF_M(x_i)\le0\}
 \le
 \frac1n\sum_{i=1}^{n}
 e^{-y_iF_M(x_i)}
@@ -954,7 +954,7 @@ Label noise also matters: the algorithm may keep treating an unlearnable mislabe
 :::
 </details>
 
-### Q: What are AdaBoost's weaknesses? {#q-adaboost-weaknesses}
+### Q: What are AdaBoost's weaknesses? {#q-adaboost-weaknesses .qa-card}
 
 **Short answer:** AdaBoost's exponential loss can give enormous influence to persistent mistakes, so mislabeled examples and outliers are important failure modes. Training rounds are sequential, progress depends on finding useful weak learners under reweighting, and modern gradient-boosted trees usually offer more flexible losses and regularization for tabular problems.
 
@@ -993,7 +993,7 @@ AdaBoost remains conceptually important because it cleanly connects reweighting,
 
 ## Gradient Boosting {#sec-gradient-boosting}
 
-### Q: What is gradient boosting? {#q-gradient-boosting}
+### Q: What is gradient boosting? {#q-gradient-boosting .qa-card}
 
 **Short answer:** Gradient boosting builds an additive model by repeatedly fitting a weak learner in the direction that most reduces the current loss. In function space, each new learner approximates the negative gradient of the loss with respect to the ensemble's current predictions.
 
@@ -1083,7 +1083,7 @@ It is also too absolute to say boosting "reduces only bias." Sequential correcti
 :::
 </details>
 
-### Q: Why are gradient-boosting trees often described as fitting residuals? {#q-gradient-boosting-residuals}
+### Q: Why are gradient-boosting trees often described as fitting residuals? {#q-gradient-boosting-residuals .qa-card}
 
 **Short answer:** For squared-error loss, the negative gradient with respect to the current prediction is exactly the residual $y_i-F(x_i)$. Fitting the next tree to residuals is therefore gradient descent in prediction-function space. For other losses, the corresponding targets are pseudo-residuals rather than ordinary residuals.
 
@@ -1170,7 +1170,7 @@ The residual is $y_i-F(x_i)$, while the gradient of half-squared error is $F(x_i
 :::
 </details>
 
-### Q: Derive gradient boosting as gradient descent in function space. {#q-gradient-boosting-functional-gradient}
+### Q: Derive gradient boosting as gradient descent in function space. {#q-gradient-boosting-functional-gradient .qa-card}
 
 **Short answer:** Ordinary gradient descent updates a parameter vector along its negative loss gradient. Gradient boosting applies the same idea to the vector of model predictions: it computes the desired negative-gradient update at each training point, fits a weak learner to approximate that update, and adds the learner to the current function.
 
@@ -1290,7 +1290,7 @@ The central idea remains unchanged: construct an additive function by repeatedly
 :::
 </details>
 
-### Q: What does the learning rate do in gradient boosting? {#q-gradient-boosting-learning-rate}
+### Q: What does the learning rate do in gradient boosting? {#q-gradient-boosting-learning-rate .qa-card}
 
 **Short answer:** The learning rate shrinks each new learner's contribution. A smaller value makes boosting more conservative and often improves generalization, but usually requires more trees. I tune learning rate and number of trees together; making the rate extremely small can underfit under a fixed compute or tree budget.
 
@@ -1350,7 +1350,7 @@ Boosting shrinkage is analogous to a step size, but it should not be confused wi
 
 ## XGBoost {#sec-xgboost}
 
-### Q: What is XGBoost, and how is it different from ordinary gradient boosting? {#q-xgboost}
+### Q: What is XGBoost, and how is it different from ordinary gradient boosting? {#q-xgboost .qa-card}
 
 **Short answer:** XGBoost is a specific regularized gradient-boosted-tree algorithm and optimized system. It still adds trees sequentially, but uses a second-order loss approximation, explicit penalties on tree complexity and leaf scores, shrinkage, row and feature subsampling, sparse-value handling, and efficient tree construction.
 
@@ -1409,7 +1409,7 @@ Conversely, not every feature of the software package defines the boosting princ
 :::
 </details>
 
-### Q: What objective does XGBoost optimize? {#q-xgboost-objective}
+### Q: What objective does XGBoost optimize? {#q-xgboost-objective .qa-card}
 
 **Short answer:** XGBoost minimizes training loss plus regularization over the trees. A standard form is $\sum_i\ell(y_i,\hat y_i)+\sum_k\Omega(f_k)$, where $\Omega(f)=\gamma T+\frac12\lambda\lVert w\rVert_2^2$ penalizes the number of leaves and the magnitudes of their scores.
 
@@ -1499,7 +1499,7 @@ The symbol $\gamma$ here denotes XGBoost's leaf-complexity penalty. It is unrela
 :::
 </details>
 
-### Q: Why does XGBoost use both first- and second-order derivatives? {#q-xgboost-second-order}
+### Q: Why does XGBoost use both first- and second-order derivatives? {#q-xgboost-second-order .qa-card}
 
 **Short answer:** The gradient tells XGBoost which direction should lower the loss, while the Hessian describes local curvature and helps scale that update. Together they give a Newton-style local approximation that supports principled leaf weights and split scores rather than treating all gradient corrections as equally curved.
 
@@ -1634,7 +1634,7 @@ The Hessian here is the second derivative with respect to each example's current
 :::
 </details>
 
-### Q: Derive the optimal leaf weight in XGBoost. {#q-xgboost-leaf-weight}
+### Q: Derive the optimal leaf weight in XGBoost. {#q-xgboost-leaf-weight .qa-card}
 
 **Short answer:** For a fixed leaf $j$, aggregate its gradients and Hessians as $G_j=\sum_{i\in I_j}g_i$ and $H_j=\sum_{i\in I_j}h_i$. Its quadratic objective is $G_jw_j+\frac12(H_j+\lambda)w_j^2$, so setting the derivative to zero gives $w_j^*=-G_j/(H_j+\lambda)$.
 
@@ -1769,7 +1769,7 @@ This expression is the basis of split scoring.
 :::
 </details>
 
-### Q: How does XGBoost decide whether a split is useful? {#q-xgboost-split-gain}
+### Q: How does XGBoost decide whether a split is useful? {#q-xgboost-split-gain .qa-card}
 
 **Short answer:** XGBoost compares the best regularized objective value of the parent leaf with those of its proposed children. A split is useful only when the improvement from fitting separate child scores exceeds the complexity cost $\gamma$, along with any implementation constraints such as minimum child weight.
 
@@ -1865,7 +1865,7 @@ The exact reported gain can differ by a constant factor across conventions, espe
 
 ## Boosted-Tree Comparisons {#sec-boosted-tree-comparisons}
 
-### Q: AdaBoost vs Gradient Boosting? {#q-adaboost-vs-gradient-boosting}
+### Q: AdaBoost vs Gradient Boosting? {#q-adaboost-vs-gradient-boosting .qa-card}
 
 **Short answer:** Both build stagewise additive ensembles. AdaBoost's classic binary-classification algorithm reweights examples and assigns each classifier a closed-form vote under exponential loss. Gradient boosting is the broader framework: it fits weak learners to negative gradients of a chosen differentiable loss, so it naturally extends to regression, classification, ranking, and other objectives.
 
@@ -1915,7 +1915,7 @@ Do not say that all gradient boosting explicitly reweights examples in the same 
 :::
 </details>
 
-### Q: Gradient Boosting vs XGBoost? {#q-gradient-boosting-vs-xgboost}
+### Q: Gradient Boosting vs XGBoost? {#q-gradient-boosting-vs-xgboost .qa-card}
 
 **Short answer:** Gradient boosting is the general framework of adding weak learners along loss-reducing directions. XGBoost is a specific regularized boosted-tree algorithm and implementation that uses second-order derivatives, explicit tree penalties, shrinkage, subsampling, sparse-value handling, and optimized split construction.
 
@@ -1965,7 +1965,7 @@ It is also inaccurate to define it only by runtime. Its second-order objective a
 :::
 </details>
 
-### Q: Random Forest vs XGBoost? {#q-random-forest-vs-xgboost}
+### Q: Random Forest vs XGBoost? {#q-random-forest-vs-xgboost .qa-card}
 
 **Short answer:** Random Forest fits many decorrelated trees largely independently and averages them, making it a robust, parallelizable variance-reduction baseline. XGBoost builds trees sequentially to optimize a regularized loss, often giving stronger tuned tabular accuracy but requiring more careful hyperparameter control and offering less training parallelism across trees.
 

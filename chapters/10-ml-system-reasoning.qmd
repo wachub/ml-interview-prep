@@ -4,7 +4,7 @@ This chapter concerns ML decisions across a system or project lifecycle, rather 
 
 ## Defining the problem, target, and labels
 
-### Q: Design an ML system to detect offensive or policy-violating multimedia or advertising content. {#q-offensive-content}
+### Q: Design an ML system to detect offensive or policy-violating multimedia or advertising content. {#q-offensive-content .qa-card}
 
 **Short answer:** I would first turn policy into an operational label taxonomy, define the costs of each error, and choose slice-aware metrics. Then I would collect representative text, image, video, audio, and metadata examples; establish a rules or simple-model baseline; train a multimodal model; set policy-specific thresholds with a human-review path; deploy it as a latency-aware cascade; and monitor drift, appeals, and failures by policy and user slice.
 
@@ -56,7 +56,7 @@ Monitor input and score drift, per-policy precision and recall from sampled revi
 
 ## Metrics, baselines, and data collection
 
-### Q: What data would you collect to train this model, and why? {#q-training-data}
+### Q: What data would you collect to train this model, and why? {#q-training-data .qa-card}
 
 **Short answer:** Training data should follow from the prediction target and approximate the distribution and information available at deployment. I would define labels and examples precisely, sample representative traffic plus important rare slices and hard negatives, control class balance without losing calibration information, prevent temporal or entity leakage, measure label quality, and verify that every training feature can be produced the same way at serving time.
 
@@ -100,7 +100,7 @@ Model selection should begin with an explicit baseline and an experiment that is
 
 ## Offline and online evaluation
 
-### Q: How would you design a YouTube-like recommendation system? {#q-youtube-recommendation}
+### Q: How would you design a YouTube-like recommendation system? {#q-youtube-recommendation .qa-card}
 
 **Short answer:** I would define the product objective, retrieve a few hundred relevant candidates, rank them with richer user, item, and context features, train from exposure-aware implicit and explicit signals, evaluate ranking quality and important slices offline, validate watch-quality and ecosystem outcomes online, serve within a strict latency budget, and monitor position bias, diversity, freshness, and feedback loops.
 
@@ -121,7 +121,7 @@ Candidate and ranking models need appropriate negatives: exposed-but-skipped ite
 
 #### Evaluation
 
-Offline, use retrieval recall for candidate generation and ranking metrics such as NDCG, recall at \(k\), calibrated outcome estimates, and slice metrics for the ranker. Replay data reflects the old policy and its position bias, so offline gains are evidence rather than final proof.
+Offline, use retrieval recall for candidate generation and ranking metrics such as NDCG, recall at $k$, calibrated outcome estimates, and slice metrics for the ranker. Replay data reflects the old policy and its position bias, so offline gains are evidence rather than final proof.
 
 Online experiments should measure the intended value—such as satisfied watch time or retention—alongside guardrails for complaints, unsafe exposure, latency, creator concentration, and long-term health. Check novelty and diversity rather than optimizing only the next click.
 
@@ -146,7 +146,7 @@ Deployment also changes the future training distribution. The [bias and feedback
 
 ## Deployment: latency, accuracy, and inference cost
 
-### Q: Design autocomplete and spell check for a mobile device. {#q-mobile-autocomplete}
+### Q: Design autocomplete and spell check for a mobile device. {#q-mobile-autocomplete .qa-card}
 
 **Short answer:** I would define separate correction and next-token targets, generate a small candidate set, and rank it with a compressed language-aware model. The design must balance ranking quality with keystroke-level latency, memory, battery, privacy, and offline availability, so I would choose deliberately between on-device and server inference, personalize from consented local signals, and evaluate both text quality and user actions such as acceptance and immediate undo.
 
@@ -184,7 +184,7 @@ Personalization should have a safe fallback, bounded update rules, clear deletio
 :::
 </details>
 
-### Q: Design an ML system for email autocomplete or automatic responses. {#q-email-autocomplete}
+### Q: Design an ML system for email autocomplete or automatic responses. {#q-email-autocomplete .qa-card}
 
 **Short answer:** I would first choose the action—continuing a draft, ranking short replies, or generating a response—then define exactly which thread and user context is permitted. I would build privacy-filtered training examples, generate and rank candidates, evaluate relevance and semantic correctness as well as acceptance, enforce safety and memorization controls, meet interactive latency, and personalize only with explicit data and rollback boundaries.
 
@@ -220,7 +220,7 @@ Cache reusable thread encodings where safe, limit context length explicitly, and
 :::
 </details>
 
-### Q: How would you improve model inference throughput without unacceptable loss of quality? {#q-inference-throughput}
+### Q: How would you improve model inference throughput without unacceptable loss of quality? {#q-inference-throughput .qa-card}
 
 **Short answer:** I would first profile the end-to-end service and separate throughput from per-request latency. Then I would improve batching and bucketing, reduce padded sequence work, raise accelerator utilization, and test smaller models, quantization, distillation, or caching where valid. Each change needs hardware-specific load tests and quality checks at the intended operating point; for an RNN, recurrent dependencies also limit parallelism across sequence positions.
 
@@ -248,7 +248,7 @@ Compare quality globally and on difficult slices, recalibrate scores if needed, 
 
 #### RNN Variant
 
-An RNN state at step \(t\) depends on the state at \(t-1\), so positions within one sequence cannot generally be evaluated in parallel. Batching parallelizes across independent sequences, while length bucketing, packed sequences, truncated state, optimized recurrent kernels, quantization, and distillation reduce wasted or per-step work. Replacing the architecture is an option only if quality, memory, and latency measurements support it.
+An RNN state at step $t$ depends on the state at $t-1$, so positions within one sequence cannot generally be evaluated in parallel. Batching parallelizes across independent sequences, while length bucketing, packed sequences, truncated state, optimized recurrent kernels, quantization, and distillation reduce wasted or per-step work. Replacing the architecture is an option only if quality, memory, and latency measurements support it.
 
 See [RNN sequence mechanics](05-neural-networks.qmd#sec-rnn-throughput) for the architectural reason behind this constraint.
 
@@ -261,7 +261,7 @@ See [RNN sequence mechanics](05-neural-networks.qmd#sec-rnn-throughput) for the 
 :::
 </details>
 
-### Q: What are the major steps in taking a trained ML model from experimentation to production? {#q-production-lifecycle}
+### Q: What are the major steps in taking a trained ML model from experimentation to production? {#q-production-lifecycle .qa-card}
 
 **Short answer:** I would make preprocessing and training reproducible; register the data, code, model, and configuration versions; package a stable serving interface; validate features, quality, safety, and performance before launch; deploy through shadow, canary, or staged traffic; monitor model and system behavior; keep a tested rollback path; and define ownership and triggers for retraining. Cloud vendors provide implementations, but those lifecycle guarantees are the durable design.
 
@@ -301,7 +301,7 @@ GCP, AWS, or another platform can supply registries, orchestration, serving, and
 
 ## Monitoring, retraining, and feedback loops
 
-### Q: How would you detect and mitigate bias or feedback loops in an ML system? {#q-bias-feedback-loops}
+### Q: How would you detect and mitigate bias or feedback loops in an ML system? {#q-bias-feedback-loops .qa-card}
 
 **Short answer:** I would first distinguish model error from sampling or label bias, systematic effects on users or groups, and deployment feedback loops. I would log both exposures and outcomes, evaluate calibrated performance and impact on meaningful slices, audit how data were collected, and use controlled exploration or randomized traffic where appropriate. Mitigation may require better sampling and labels, constraints or thresholds, product changes, and retraining on data that separates prior model behavior from the outcome of interest.
 
@@ -350,7 +350,7 @@ Where possible, separate historical model decisions from ground truth: obtain in
 
 ## Project deep dives and failed experiments
 
-### Q: Walk me through an ML project you worked on and the impact it had. {#q-project-impact}
+### Q: Walk me through an ML project you worked on and the impact it had. {#q-project-impact .qa-card}
 
 **Short answer:** I would answer with one project I genuinely know end to end: the problem and why ML was appropriate, the data and baseline, the model and metric, the experiments and failures, my specific contribution, the final result and how we established it was real, the product or research impact, and what I would change now. I would use concrete numbers where I can defend them and never imply ownership I did not have.
 
@@ -385,7 +385,7 @@ Use “I” for your decisions and implementation and “we” for team outcomes
 - What was your personal contribution?
 - What failed, and how did you diagnose it?
 - Why was that the right metric, and how did you know the gain was real?
-- What would you do with \(10\times\) more data?
-- What would you do with \(10\times\) more compute?
+- What would you do with $10\times$ more data?
+- What would you do with $10\times$ more compute?
 :::
 </details>

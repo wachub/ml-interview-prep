@@ -14,7 +14,7 @@ This chapter will turn model symptoms into a disciplined sequence of checks, hyp
 
 ## Debugging training and data
 
-### Q: A bad training batch or corrupted model has entered your ML pipeline. How would you detect, contain, and recover from it? {#q-corrupt-pipeline}
+### Q: A bad training batch or corrupted model has entered your ML pipeline. How would you detect, contain, and recover from it? {#q-corrupt-pipeline .qa-card}
 
 **Short answer:** I would detect the incident through validation failures or anomalous data, loss, gradient, and serving metrics; immediately stop promotion and quarantine the suspect data and artifacts; then use lineage and controlled comparisons to isolate whether the fault is in data, model code or state, or infrastructure. I would roll back to the last known-good model, verify its inputs and checkpoint, retrain reproducibly from clean versioned data if needed, and add validation gates, canaries, and monitoring to prevent recurrence.
 
