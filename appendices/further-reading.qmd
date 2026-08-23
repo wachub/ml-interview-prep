@@ -1,0 +1,17 @@
+# Further Reading
+
+This is a curated reading list, not a bibliography dump. Add resources only when they clarify a chapter or support a practical exercise.
+
+## Foundations
+
+- *Understanding Machine Learning* — Shalev-Shwartz and Ben-David, for learning theory perspective.
+- *The Elements of Statistical Learning* — Hastie, Tibshirani, and Friedman, for selected classical-model depth.
+
+## Deep learning and modern ML
+
+- *Deep Learning* — Goodfellow, Bengio, and Courville, for selected foundations.
+- “Attention Is All You Need” — Vaswani et al., for the original Transformer architecture.
+
+## Practice
+
+Pair reading with a small reproduction, diagnostic notebook, or spoken explanation. Add interview prompts to the question bank only when they point back to a durable explanation.

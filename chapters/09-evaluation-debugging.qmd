@@ -1,0 +1,19 @@
+# Evaluation, Experimentation, and ML Debugging
+
+This chapter will turn model symptoms into a disciplined sequence of checks, hypotheses, and experiments.
+
+## Classification and regression metrics
+
+## Precision, recall, F1, ROC-AUC, and PR-AUC
+
+## Class imbalance, thresholds, and calibration
+
+## Data leakage and distribution shift
+
+## Baselines, ablations, and experiment design
+
+## Debugging training and data
+
+## Diagnosing model failures
+
+Planned scenarios include diverging validation loss, NaN loss, one-class predictions, offline/production disagreement, and performance that falls after adding data.

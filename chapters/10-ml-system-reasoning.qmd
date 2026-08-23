@@ -1,0 +1,17 @@
+# ML System and Research Reasoning
+
+This chapter concerns ML decisions across a system or project lifecycle, rather than generic distributed-systems interview material.
+
+## Defining the problem, target, and labels
+
+## Metrics, baselines, and data collection
+
+## Experimentation and model selection
+
+## Offline and online evaluation
+
+## Deployment: latency, accuracy, and inference cost
+
+## Monitoring, retraining, and feedback loops
+
+## Project deep dives and failed experiments

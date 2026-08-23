@@ -1,0 +1,13 @@
+# Interview Question Bank {#sec-question-bank}
+
+This appendix will contain prompts linked to the chapters that develop the underlying reasoning. It should support retrieval practice, not repeat the explanations.
+
+## Foundations
+
+- Why is cross entropy a sensible classification objective? See [Chapter 1](../chapters/01-probability-statistics.qmd).
+- Why does a validation set not, by itself, prevent overfitting? See [Chapter 2](../chapters/02-generalization-regularization.qmd).
+- Compare early stopping with weight decay. See [Chapter 2](../chapters/02-generalization-regularization.qmd).
+
+## Planned question sets
+
+Optimization and training dynamics; classical model comparisons; neural networks and Transformers; LLM and RAG systems; evaluation/debugging scenarios; and project/research deep dives.

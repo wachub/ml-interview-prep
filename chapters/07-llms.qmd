@@ -1,0 +1,19 @@
+# Modern LLM Fundamentals
+
+This chapter will favor durable concepts for reasoning about language-model training, adaptation, evaluation, and serving.
+
+## Tokenization and next-token prediction
+
+## Pretraining and scaling intuition
+
+## Decoding: temperature, top-k, and top-p
+
+## Context windows and KV caching
+
+## Instruction tuning and fine-tuning
+
+## Parameter-efficient adaptation: LoRA and QLoRA
+
+## Preference tuning: RLHF and DPO-level concepts
+
+## Quantization, evaluation, and inference trade-offs

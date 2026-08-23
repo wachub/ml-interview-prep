@@ -1,0 +1,17 @@
+# Neural Networks and Representation Learning
+
+This chapter will build the vocabulary to explain how networks learn useful representations without treating architecture history as the main goal.
+
+## From linear layers to nonlinear functions
+
+## Backpropagation and computational graphs
+
+## Activation functions, depth, and capacity
+
+## Representations and embeddings
+
+## Residual connections
+
+## Convolutional neural network intuition
+
+## Sequence-model intuition

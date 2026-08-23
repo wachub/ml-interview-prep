@@ -1,0 +1,51 @@
+project:
+  type: book
+  output-dir: _book
+
+book:
+  title: "ML Interview Prep"
+  subtitle: "Reasoning-first preparation for ML, research, and applied AI interviews"
+  page-navigation: true
+  search: true
+  sidebar:
+    style: docked
+    search: true
+  chapters:
+    - index.qmd
+    - part: "Core ML Foundations"
+      chapters:
+        - chapters/01-probability-statistics.qmd
+        - chapters/02-generalization-regularization.qmd
+        - chapters/03-optimization.qmd
+        - chapters/04-core-ml-models.qmd
+    - part: "Deep Learning and Modern ML"
+      chapters:
+        - chapters/05-neural-networks.qmd
+        - chapters/06-transformers.qmd
+        - chapters/07-llms.qmd
+        - chapters/08-retrieval-rag.qmd
+    - part: "Interview Reasoning"
+      chapters:
+        - chapters/09-evaluation-debugging.qmd
+        - chapters/10-ml-system-reasoning.qmd
+  appendices:
+    - appendices/interview-questions.qmd
+    - appendices/math-reference.qmd
+    - appendices/further-reading.qmd
+
+format:
+  html:
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    number-sections: true
+    html-math-method: katex
+    code-copy: true
+    grid:
+      sidebar-width: 290px
+      body-width: 900px
+
+execute:
+  freeze: auto
+
+

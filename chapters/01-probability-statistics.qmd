@@ -1,0 +1,132 @@
+# Probability, Statistics, and Learning Objectives
+
+Probability is useful in interviews when it explains a modeling decision: what uncertainty means, why a loss is appropriate, or what an estimate assumes. This chapter is not a statistics course; it is a working vocabulary for reasoning about ML objectives.
+
+## Random variables and distributions
+
+A random variable maps an uncertain outcome to a number. Its distribution describes which values are plausible and how likely they are. For a discrete variable we use a probability mass function \(p(x)\); for a continuous variable, a density \(p(x)\). A density is not itself a probability: probability over an interval is its integral.
+
+### Expectation and variance
+
+The expectation \(\mathbb{E}[X]\) is a distribution-weighted average. Variance, \(\operatorname{Var}(X)=\mathbb{E}[(X-\mathbb{E}[X])^2]\), measures spread around that average. They answer different questions: a model can have an unbiased prediction on average while still being highly variable.
+
+Covariance measures whether two variables vary together:
+
+$$
+\operatorname{Cov}(X,Y)=\mathbb{E}[(X-\mathbb{E}X)(Y-\mathbb{E}Y)].
+$$ {#eq-covariance}
+
+Zero covariance does not generally imply independence. It does for some special distribution families, such as jointly Gaussian variables.
+
+### Conditional probability and Bayes' rule
+
+Conditional probability updates a probability after observing information: \(p(y\mid x)\). Bayes' rule reverses a conditional:
+
+$$
+p(\theta\mid D)=\frac{p(D\mid\theta)p(\theta)}{p(D)}.
+$$ {#eq-bayes}
+
+Here \(p(\theta)\) is a prior belief, \(p(D\mid\theta)\) is how compatible the observed data are with parameters \(\theta\), and \(p(\theta\mid D)\) is the updated belief. The denominator normalizes across all possible parameters; when optimizing with respect to \(\theta\), it is constant.
+
+::: {.callout-note}
+## Interview habit
+
+When someone says “probability,” ask: probability conditional on *what information*, and under *which distributional assumption*? Making those conditions explicit often reveals the real modeling choice.
+:::
+
+## From assumptions to objectives
+
+### Likelihood, MLE, and MAP
+
+Given parameters \(\theta\), the likelihood treats the data as fixed and asks how plausible they are under the model: \(p(D\mid\theta)\). Maximum likelihood estimation (MLE) chooses
+
+$$
+\hat\theta_{\mathrm{MLE}}=\arg\max_\theta p(D\mid\theta).
+$$
+
+For independently observed examples, products of probabilities become sums of log-probabilities. This is numerically stable and easier to optimize:
+
+$$
+\arg\max_\theta \sum_{i=1}^n \log p(y_i\mid x_i;\theta).
+$$ {#eq-log-likelihood}
+
+Maximum a posteriori (MAP) estimation adds a prior:
+
+$$
+\hat\theta_{\mathrm{MAP}}=\arg\max_\theta \big[\log p(D\mid\theta)+\log p(\theta)\big].
+$$
+
+The prior encodes a preference before seeing this dataset. It can stabilize an underdetermined problem, but it is still an assumption—not a free improvement.
+
+### Why squared error and cross entropy appear
+
+Loss functions are often negative log-likelihoods under an output-noise model.
+
+- If \(y\mid x\) is Gaussian with fixed variance and mean \(f_\theta(x)\), minimizing negative log-likelihood is equivalent to minimizing squared error. Large residuals receive a quadratic penalty.
+- If a binary label is Bernoulli with predicted probability \(p_\theta(x)\), negative log-likelihood is binary cross entropy:
+
+  $$
+  -\big[y\log p_\theta(x)+(1-y)\log(1-p_\theta(x))\big].
+  $$
+
+- For a one-hot multiclass target \(y\) and softmax probabilities \(p\), cross entropy is \(-\sum_k y_k\log p_k\). It rewards assigning high probability to the observed class and penalizes confident wrong predictions strongly.
+
+Cross entropy makes sense when the model is meant to represent a predictive distribution and we want a *proper* scoring rule: in expectation, the true distribution is the best prediction. Accuracy does not have this property for probability estimates; it ignores whether a correct prediction was assigned 0.51 or 0.99.
+
+### Entropy and KL divergence
+
+Entropy is the uncertainty in a distribution:
+
+$$
+H(p)=-\sum_x p(x)\log p(x).
+$$
+
+Cross entropy between a target distribution \(p\) and a model \(q\) is \(H(p,q)=-\sum_x p(x)\log q(x)\). It decomposes as
+
+$$
+H(p,q)=H(p)+D_{\mathrm{KL}}(p\Vert q),
+$$ {#eq-cross-entropy-kl}
+
+where \(D_{\mathrm{KL}}(p\Vert q)\) is nonnegative and is zero only when the distributions agree almost everywhere. Since \(H(p)\) does not depend on the model, minimizing expected cross entropy minimizes the KL divergence from data distribution to model distribution. KL is directional: swapping \(p\) and \(q\) changes what mismatch is costly.
+
+## Estimation and uncertainty
+
+### Samples are not the population
+
+An empirical mean is an estimate of a population expectation. It varies with the sampled dataset. As the sample size grows, its variance typically falls, but a large sample does not correct systematic sampling bias or a mismatched target population.
+
+In an interview, distinguish:
+
+- **Estimator bias:** the expected estimate differs from the quantity it targets.
+- **Estimator variance:** the estimate changes substantially across samples.
+- **Model bias and variance:** sources of prediction error from restricted assumptions and sensitivity to training data. These are related ideas, but not interchangeable.
+
+### Correlation, causation, and leakage
+
+Correlation can be predictive without being causal. That can be perfectly acceptable for a stable prediction task, but it becomes dangerous when the correlation comes from post-outcome information, a future feature, or a process that changes at deployment. Before trusting a striking feature, ask when it becomes available and whether the training and serving pipelines construct it identically.
+
+## Worked example: regularization as a prior
+
+Suppose a linear regression model assumes \(y=w^\top x+\epsilon\), with Gaussian noise. Squared-error minimization is MLE. If we further place a zero-mean Gaussian prior on weights, \(w\sim\mathcal N(0,\tau^2I)\), MAP estimation becomes
+
+$$
+\min_w \sum_i (y_i-w^\top x_i)^2+\lambda\lVert w\rVert_2^2.
+$$
+
+The L2 term is not magic: it says, before data, smaller weights are more plausible. The likelihood may still support a large weight when data provide enough evidence. This connection will be used in [Chapter 2](02-generalization-regularization.qmd).
+
+## Key interview questions
+
+1. Why does MSE correspond to a Gaussian assumption, and when would that assumption be awkward?
+2. Why is cross entropy usually preferred to accuracy for training a classifier?
+3. What is the difference between a probability density and a probability?
+4. How does MAP differ from MLE, and when does the difference matter most?
+5. Is zero covariance enough to claim independence?
+6. What assumptions are hidden when a loss is chosen?
+
+## Common mistakes
+
+- Calling likelihood “the probability of the parameters.” In frequentist language it is a function of parameters with the data fixed; a posterior is a distribution over parameters.
+- Treating entropy as merely “randomness.” It depends on a specified distribution and logarithm base.
+- Saying L2 is always Bayesian. The MAP interpretation needs a compatible likelihood, prior, and scaling; L2 can also be used as an optimization or complexity preference.
+- Equating a good probabilistic loss with a useful product metric. The operating threshold and decision costs can still make the deployed system poor.

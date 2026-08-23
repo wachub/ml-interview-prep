@@ -1,0 +1,15 @@
+# Embeddings, Retrieval, and RAG
+
+This chapter will focus on the end-to-end reasoning required to make retrieval-augmented generation useful and measurable.
+
+## Embeddings and similarity metrics
+
+## Vector search and retrieval
+
+## Chunking, metadata, and reranking
+
+## RAG architectures
+
+## Retrieval and generation evaluation
+
+## Common RAG failure modes

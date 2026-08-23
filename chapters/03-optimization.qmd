@@ -1,0 +1,19 @@
+# Optimization and Training Dynamics
+
+This chapter will connect optimization choices to observed training behavior, while keeping optimization distinct from generalization.
+
+## Gradient descent and stochastic gradients
+
+## Minibatches, batch size, and gradient noise
+
+## Momentum, Adam, and adaptive methods
+
+## Learning rates and schedules
+
+## Initialization and optimization landscapes
+
+## Vanishing and exploding gradients
+
+## Normalization and gradient clipping
+
+## Optimization versus generalization

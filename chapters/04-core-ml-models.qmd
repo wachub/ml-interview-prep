@@ -1,0 +1,21 @@
+# Core ML Models
+
+This chapter is a compact comparison map for classical models: their assumptions, decision boundaries, failure modes, and appropriate baselines.
+
+## Linear and logistic regression
+
+## Regularized linear models
+
+## Decision trees and random forests
+
+## Bagging, boosting, and gradient boosting
+
+## Support vector machines
+
+## k-Nearest Neighbors
+
+## Clustering
+
+## Principal component analysis
+
+## Choosing and comparing models

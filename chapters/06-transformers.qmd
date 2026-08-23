@@ -1,0 +1,17 @@
+# Attention and Transformers
+
+This chapter will develop a mechanism-level understanding of a Transformer, including what attention computes and where its costs arise.
+
+## Why attention?
+
+## Query, key, and value
+
+## Self-attention and multi-head attention
+
+## Positional information and causal masking
+
+## Feed-forward layers, residual paths, and normalization
+
+## Encoder and decoder architectures
+
+## Complexity, training, and inference

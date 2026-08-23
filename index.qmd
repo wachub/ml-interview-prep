@@ -1,0 +1,28 @@
+---
+title: "ML Interview Prep"
+---
+
+## A reasoning-first study book
+
+This book is a long-horizon curriculum for the machine-learning portion of ML Engineer, Research Engineer, and applied AI interviews. Its goal is not to catalogue every technique. It is to build the habits needed to explain a choice, identify its assumptions, and diagnose when it fails.
+
+Use it over roughly one to two years: read a section, work a small example by hand, answer the linked questions aloud, and return when a project gives the topic more context. The early chapters deliberately receive more depth; later chapters are a map for future development.
+
+## How to use this book
+
+For an interview prompt, aim to move through four levels:
+
+1. State the direct answer and its assumptions.
+2. Give an intuition that connects to model behavior.
+3. Make the intuition precise with the smallest useful mathematical argument.
+4. Name a practical consequence, diagnostic, or counterexample.
+
+The question bank in @sec-question-bank is for practice, not a duplicate textbook. The mathematical notation that recurs across chapters lives in @sec-math-reference.
+
+## Scope
+
+This book covers ML reasoning, experimentation, modern deep learning, retrieval, and ML-system trade-offs. It intentionally excludes data structures and algorithms, LeetCode, competitive programming, and generic software-engineering interview preparation.
+
+## Suggested rhythm
+
+Work through the foundation chapters slowly, using active recall. For each major concept, write a two-minute spoken answer, then test it with a follow-up: *what changes if the data, objective, or constraint changes?* Keep an experiment notebook alongside the book; the strongest answers connect theory to observations from real models.
