@@ -4,32 +4,6 @@ This is the probability and statistics needed to reason through ML interviews: p
 
 ## Random Variables and Distributions
 
-### Q: What is a random variable? {.qa-card}
-
-**Short answer:** A random variable is a function
-
-$$
-X:\Omega\to\mathbb R
-$$
-
-that assigns a real number to each outcome in the sample space $\Omega$. It lets us represent an uncertain outcome numerically and then describe its distribution.
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Intuition
-
-The random variable is the rule; its realized value is the observation. For a coin toss, “number of heads” is a random variable, while 1 is a possible observed value.
-
-#### ML Connection
-
-A class label, residual, click indicator, and model output can each be modeled as random variables. The appropriate distribution depends on the kind of target.
-
-#### Note
-
-In a fully measure-theoretic treatment, a random variable is also required to be measurable. That detail is not usually needed for ML interviews.
-:::
-</details>
 
 ### Q: A fair coin is tossed twice. Let $X$ be the number of heads. Define $X$ and find its distribution. {.qa-card}
 
@@ -62,6 +36,34 @@ Several outcomes can map to the same random-variable value: both $HT$ and $TH$ m
 - What values can $X$ take? The support is $\{0,1,2\}$.
 :::
 </details>
+
+### Q: What is a random variable? {.qa-card}
+
+**Short answer:** A random variable is a function
+
+$$
+X:\Omega\to\mathbb R
+$$
+
+that assigns a real number to each outcome in the sample space $\Omega$. It lets us represent an uncertain outcome numerically and then describe its distribution.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+The random variable is the rule; its realized value is the observation. For a coin toss, “number of heads” is a random variable, while 1 is a possible observed value.
+
+#### ML Connection
+
+A class label, residual, click indicator, and model output can each be modeled as random variables. The appropriate distribution depends on the kind of target.
+
+#### Note
+
+In a fully measure-theoretic treatment, a random variable is also required to be measurable. That detail is not usually needed for ML interviews.
+:::
+</details>
+
 
 ### Q: When would you use Bernoulli, Binomial, or Gaussian modeling? {.qa-card}
 
@@ -453,6 +455,458 @@ For one-hot labels, cross-entropy is negative log probability of the correct cla
 KL is not a distance: it is asymmetric and does not satisfy the triangle inequality. Reversing $p$ and $q$ changes what mismatch is costly.
 :::
 </details>
+
+### Q: Why does minimizing cross-entropy also minimize KL divergence? {#q-cross-entropy-kl .qa-card}
+
+**Short answer:** Cross-entropy can be decomposed as
+
+$$
+H(p,q)=H(p)+D_{\mathrm{KL}}(p\Vert q).
+$$
+
+Since $H(p)$ depends only on the true distribution and not on the model $q$, minimizing cross-entropy with respect to the model is equivalent to minimizing $D_{\mathrm{KL}}(p\Vert q)$.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Cross-entropy measures how surprising the data looks under the model. Part of that surprise is unavoidable because the data itself may be uncertain. KL divergence measures the **extra surprise caused by using the model $q$ instead of the true distribution $p$**.
+
+So minimizing cross-entropy is effectively trying to remove this extra mismatch.
+
+#### Mathematical View
+
+Starting from
+
+$$
+D_{\mathrm{KL}}(p\Vert q)
+=
+\sum_x p(x)\log\frac{p(x)}{q(x)},
+$$
+
+we get
+
+$$
+D_{\mathrm{KL}}(p\Vert q)
+=
+-H(p)+H(p,q),
+$$
+
+and therefore
+
+$$
+H(p,q)=H(p)+D_{\mathrm{KL}}(p\Vert q).
+$$
+
+Because $H(p)$ is constant during training,
+
+$$
+\arg\min_q H(p,q)
+=
+\arg\min_q D_{\mathrm{KL}}(p\Vert q).
+$$
+
+#### ML Connection
+
+This is why training a classifier with cross-entropy can also be viewed as making its predicted probability distribution closer to the data distribution.
+
+For one-hot classification targets, $H(p)=0$, so the cross-entropy and KL objectives differ by no model-dependent term at all.
+
+#### Common Mistakes
+
+Cross-entropy and KL divergence are not generally numerically equal. They differ by $H(p)$. They simply have the same optimum with respect to $q$ when $p$ is fixed.
+:::
+</details>
+
+### Q: Why is KL divergence asymmetric, and why does the direction matter? {#q-kl-direction .qa-card}
+
+**Short answer:** In general,
+
+$$
+D_{\mathrm{KL}}(p\Vert q)
+\neq
+D_{\mathrm{KL}}(q\Vert p).
+$$
+
+The direction determines which distribution supplies the expectation and therefore which kinds of approximation errors are penalized most strongly.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Suppose $p$ is the distribution we want to approximate and $q$ is our approximation.
+
+In
+
+$$
+D_{\mathrm{KL}}(p\Vert q),
+$$
+
+regions where $p$ assigns substantial probability matter a lot. If the model $q$ ignores such a region, it receives a large penalty.
+
+In
+
+$$
+D_{\mathrm{KL}}(q\Vert p),
+$$
+
+the expectation is instead over samples from $q$. Regions that $q$ itself avoids contribute little or nothing to the objective.
+
+#### Mathematical View
+
+Forward KL is
+
+$$
+D_{\mathrm{KL}}(p\Vert q)
+=
+\mathbb{E}_{x\sim p}
+\left[
+\log\frac{p(x)}{q(x)}
+\right],
+$$
+
+whereas reverse KL is
+
+$$
+D_{\mathrm{KL}}(q\Vert p)
+=
+\mathbb{E}_{x\sim q}
+\left[
+\log\frac{q(x)}{p(x)}
+\right].
+$$
+
+Changing the distribution inside the expectation changes the behavior of the optimization.
+
+#### Practical Consequence
+
+Forward KL tends to strongly discourage the approximation from assigning very low probability to regions where $p$ has significant mass.
+
+Reverse KL can more easily concentrate on one high-probability region while ignoring others. This is sometimes described informally as **mode covering versus mode seeking**.
+
+#### Common Mistakes
+
+The "forward KL is always mode-covering and reverse KL is always mode-seeking" slogan is only an intuition, not a universal theorem about every optimization problem.
+:::
+</details>
+
+### Q: What happens if the model assigns zero probability to an event that can actually occur? {#q-kl-zero-probability .qa-card}
+
+**Short answer:** If $p(x)>0$ but $q(x)=0$, then
+
+$$
+D_{\mathrm{KL}}(p\Vert q)=\infty.
+$$
+
+The model has declared an event impossible even though the true distribution says it can occur.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+KL divergence strongly penalizes a model for being completely certain that a possible event cannot happen.
+
+If an event occurs with nonzero probability under $p$, assigning it probability exactly zero under $q$ represents an extreme mismatch.
+
+#### Mathematical View
+
+The corresponding term is
+
+$$
+p(x)\log\frac{p(x)}{q(x)}.
+$$
+
+As $q(x)\rightarrow 0$ while $p(x)>0$,
+
+$$
+\log\frac{p(x)}{q(x)}
+\rightarrow \infty.
+$$
+
+Hence the KL divergence becomes infinite.
+
+#### ML Connection
+
+Softmax classifiers normally assign every class a positive probability, although some probabilities can become extremely small.
+
+Related numerical issues are one reason implementations usually work with log-probabilities and stable functions such as log-softmax rather than explicitly computing tiny probabilities.
+
+#### Interview Follow-up
+
+**What if $p(x)=0$ but $q(x)>0$?**
+
+That point contributes zero to $D_{\mathrm{KL}}(p\Vert q)$ because outcomes that never occur under $p$ are never encountered in the expectation over $p$.
+:::
+</details>
+
+### Q: Why is KL divergence used in knowledge distillation? {#q-kl-distillation .qa-card}
+
+**Short answer:** Knowledge distillation trains a smaller student model to imitate the probability distribution produced by a larger teacher model. KL divergence measures the mismatch between these two predictive distributions.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+A hard label might only say
+
+$$
+\text{cat}.
+$$
+
+A teacher might instead predict
+
+$$
+[\text{cat}:0.70,\;
+\text{tiger}:0.25,\;
+\text{car}:0.05].
+$$
+
+These probabilities reveal that the teacher considers "tiger" much more similar to "cat" than "car."
+
+The student can learn this additional structure by matching the teacher's full probability distribution.
+
+#### Mathematical View
+
+A distillation objective can contain a term such as
+
+$$
+D_{\mathrm{KL}}
+(
+p_{\mathrm{teacher}}
+\Vert
+p_{\mathrm{student}}
+).
+$$
+
+Because the teacher distribution is fixed, minimizing this KL divergence is closely related to minimizing cross-entropy using the teacher probabilities as soft targets.
+
+#### ML Connection
+
+Knowledge distillation is commonly used to transfer behavior from a large model to a smaller or cheaper model.
+
+Temperature scaling is often applied to the logits so that the teacher distribution is softer and exposes more information about relative class probabilities.
+
+#### Interview Follow-up
+
+**Why not just train the student on the original labels?**
+
+Because hard labels discard information about how the teacher distributes probability among the incorrect alternatives.
+:::
+</details>
+
+### Q: Where does KL divergence appear in variational autoencoders (VAEs)? {#q-kl-vae .qa-card}
+
+**Short answer:** A VAE uses a KL term to keep the encoder's latent distribution $q_\phi(z|x)$ close to a simple prior $p(z)$, usually a standard Gaussian.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+A VAE wants two things:
+
+1. the latent representation should contain enough information to reconstruct the input;
+2. the latent space should remain structured enough that we can sample from it.
+
+The reconstruction term encourages the first goal. The KL term encourages the second.
+
+#### Mathematical View
+
+A common VAE objective contains
+
+$$
+D_{\mathrm{KL}}
+\left(
+q_\phi(z|x)
+\Vert
+p(z)
+\right),
+$$
+
+where typically
+
+$$
+p(z)=\mathcal{N}(0,I).
+$$
+
+The full objective balances reconstruction quality against agreement with this prior.
+
+#### ML Connection
+
+Without the KL regularization, the encoder could place different inputs in arbitrary disconnected regions of latent space.
+
+Then drawing a random
+
+$$
+z\sim\mathcal N(0,I)
+$$
+
+would not necessarily produce a meaningful sample when passed through the decoder.
+
+#### Interview Follow-up
+
+**What happens if the KL term is weighted too strongly?**
+
+The latent representation may be forced too close to the prior and carry too little information about the input. In extreme cases this contributes to posterior collapse.
+:::
+</details>
+
+
+### Q: When would you use cross-entropy versus KL divergence in practice? {#q-cross-entropy-vs-kl-practice .qa-card}
+
+**Short answer:** Cross-entropy is usually used when training a model against observed labels or target probabilities. KL divergence is especially useful when explicitly comparing two probability distributions, such as a student and teacher model, an updated and reference policy, or an approximate and target distribution.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+The two objectives are closely related:
+
+$$
+H(p,q)=H(p)+D_{\mathrm{KL}}(p\Vert q).
+$$
+
+If $p$ is fixed, minimizing either with respect to $q$ gives the same optimum.
+
+The choice often depends more on **what interpretation is useful** than on a fundamentally different optimization objective.
+
+#### Typical Uses
+
+Cross-entropy commonly appears in:
+
+- classification;
+- next-token prediction;
+- supervised learning with probabilistic targets.
+
+KL divergence commonly appears explicitly in:
+
+- knowledge distillation;
+- VAEs and variational inference;
+- policy regularization in RL and LLM post-training;
+- comparing or constraining probability distributions.
+
+#### Common Mistakes
+
+It is misleading to think of KL and cross-entropy as completely separate losses. In many supervised settings, cross-entropy is effectively performing KL minimization up to a constant independent of the model.
+:::
+</details>
+
+### Q: How is KL divergence used in variational inference? {#q-kl-variational-inference .qa-card}
+
+**Short answer:** Variational inference replaces a difficult probability distribution, usually a posterior, with a simpler distribution that can be optimized. KL divergence measures how different the approximation is from the target distribution.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Bayesian inference often asks us to compute a posterior such as
+
+$$
+p(z|x).
+$$
+
+For complicated models, computing this distribution exactly may be intractable.
+
+Instead, we introduce a tractable distribution
+
+$$
+q_\phi(z)
+$$
+
+and choose its parameters so that it approximates the posterior as well as possible.
+
+#### Mathematical View
+
+A common formulation tries to minimize
+
+$$
+D_{\mathrm{KL}}
+(
+q_\phi(z)
+\Vert
+p(z|x)
+).
+$$
+
+The posterior itself contains an intractable normalization term, so in practice this objective is rearranged into the **evidence lower bound (ELBO)**, which can be optimized.
+
+#### ML Connection
+
+VAEs are one important application of variational inference: a neural network predicts the parameters of an approximate posterior over latent variables.
+
+#### Interview Follow-up
+
+**Why not compute the exact posterior?**
+
+For many useful probabilistic models, the required integrals or sums are computationally infeasible. Variational inference turns inference into an optimization problem.
+:::
+</details>
+
+### Q: Why is KL divergence used in LLM reinforcement learning and post-training? {#q-kl-llm-rlhf .qa-card}
+
+**Short answer:** A KL penalty prevents an updated language-model policy from moving too far away from a reference model while optimizing a reward or preference signal.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Suppose we start with a capable pretrained or instruction-tuned model and then optimize it for human preferences.
+
+The reward says:
+
+> Change the model toward outputs that receive higher reward.
+
+But optimizing only that reward could make the model exploit weaknesses in the reward signal or move toward strange behavior.
+
+The KL term says:
+
+> Improve the reward, but do not move too far from the original model.
+
+#### Mathematical View
+
+A simplified objective is
+
+$$
+\mathbb{E}[R]
+-
+\beta
+D_{\mathrm{KL}}
+(
+\pi_\theta
+\Vert
+\pi_{\mathrm{ref}}
+).
+$$
+
+Here $\pi_\theta$ is the policy being trained and $\pi_{\mathrm{ref}}$ is a fixed reference model.
+
+The coefficient $\beta$ controls the strength of the constraint.
+
+#### Effect of the KL Coefficient
+
+A larger $\beta$ penalizes deviation more strongly, so the trained model stays closer to the reference policy.
+
+A smaller $\beta$ allows the model to change more aggressively in order to improve reward.
+
+This creates a trade-off between optimizing the new objective and preserving useful behavior learned during earlier training.
+
+#### ML Connection
+
+KL regularization appears in several reinforcement-learning and preference-optimization formulations for language models, although the exact objective and implementation differ between algorithms.
+
+#### Common Mistakes
+
+The KL term is not primarily there because the reference model is assumed to be "correct." It acts as a constraint or regularizer that limits how far optimization can move the policy.
+:::
+</details>
+
 
 ## Concept Reference
 

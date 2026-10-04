@@ -28,6 +28,7 @@ book:
       chapters:
         - chapters/09-evaluation-debugging.qmd
         - chapters/10-ml-system-reasoning.qmd
+        - chapters/11-ml-extra-questions.qmd
   appendices:
     - appendices/interview-questions.qmd
     - appendices/math-reference.qmd

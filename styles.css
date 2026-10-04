@@ -128,13 +128,161 @@ body { color: var(--qa-ink); background: #fafaf8; }
 #quarto-content section.qa-card .math.display { margin: .8rem 0; }
 
 @keyframes qa-reveal { from { opacity: 0; transform: translateY(-3px); } to { opacity: 1; transform: translateY(0); } }
-@media (prefers-color-scheme: dark) {
-  body { background: #202322; color: #e1e5e2; }
-  :root { --qa-surface: #292d2b; --qa-surface-soft: #333835; --qa-ink: #e1e5e2; --qa-muted: #afb9b5; --qa-line: #46504b; --qa-accent-soft: #29443d; }
-  #quarto-content h2, #quarto-content h3, #quarto-content h3 + p { color: var(--qa-ink); }
-  #quarto-content section.qa-card > p { color: var(--qa-ink); }
-  #quarto-content section.qa-card details .panel-tabset .tab-content { background: #292d2b; }
-}
+/* Use one deliberate dark palette in every browser instead of relying on browser-specific theme preferences. */
+  :root {
+    color-scheme: dark;
+    --qa-surface: #0e1210;
+    --qa-surface-soft: #151b18;
+    --qa-ink: #e7ece9;
+    --qa-muted: #aeb9b4;
+    --qa-line: #38443e;
+    --qa-accent: #8bbab1;
+    --qa-accent-soft: #203b34;
+    --qa-page: #000;
+    --qa-sidebar: #000;
+    --qa-link: #8fc3f4;
+    --qa-link-hover: #b7d8f7;
+    --bs-body-color: var(--qa-ink);
+    --bs-body-bg: var(--qa-page);
+    --bs-emphasis-color: #f4f7f5;
+    --bs-secondary-color: var(--qa-muted);
+    --bs-border-color: var(--qa-line);
+    --bs-link-color: var(--qa-link);
+    --bs-link-hover-color: var(--qa-link-hover);
+  }
+
+  html,
+  body,
+  #quarto-content { background: var(--qa-page); color: var(--qa-ink); }
+
+  a { color: var(--qa-link); }
+  a:hover { color: var(--qa-link-hover); }
+  #quarto-content h1,
+  #quarto-content h2,
+  #quarto-content h3,
+  #quarto-content h4,
+  #quarto-content h5,
+  #quarto-content h6 { color: var(--qa-ink); }
+  #quarto-content h2 { border-bottom-color: var(--qa-line); }
+  #quarto-content h2 .header-section-number,
+  #quarto-content section.qa-card > h3 .header-section-number { color: #9daaa4; }
+  #quarto-content section.qa-card > h3,
+  #quarto-content section.qa-card > h3 a { color: #edf2ef; }
+  #quarto-content section.qa-card > p,
+  #quarto-content section.qa-card li,
+  #quarto-content section.qa-card dd,
+  #quarto-content section.qa-card dt { color: var(--qa-ink); }
+  #quarto-content section.qa-card > h3 + p strong:first-child,
+  .question-source { color: #bac5c0; }
+
+  #quarto-sidebar {
+    background: var(--qa-sidebar);
+    border-right-color: var(--qa-line);
+    color: var(--qa-ink);
+  }
+  #quarto-sidebar .sidebar-title,
+  #quarto-sidebar .sidebar-title a { color: #f0f4f2; }
+  #quarto-sidebar .sidebar-link,
+  #quarto-sidebar .sidebar-item-toggle { color: #c7d0cc; }
+  #quarto-sidebar .sidebar-item-section > .sidebar-item-container > .sidebar-link { color: #dce3e0; }
+  #quarto-sidebar .sidebar-link:hover,
+  #quarto-sidebar .sidebar-item-toggle:hover { color: #f2f5f3; }
+  #quarto-sidebar .sidebar-link.active { color: var(--qa-link); font-weight: 600; }
+  #quarto-sidebar .chapter-number { color: #8e9b95; }
+  #quarto-sidebar .sidebar-link.active .chapter-number { color: #a8d2f8; }
+  #quarto-sidebar .aa-DetachedSearchButton,
+  #quarto-sidebar input {
+    border-color: #4b5751;
+    background: #0c100e;
+    color: var(--qa-ink);
+  }
+  #quarto-sidebar .aa-Form {
+    border-color: #4b5751;
+    background: #0c100e;
+    color: var(--qa-ink);
+  }
+  #quarto-sidebar .aa-DetachedSearchButtonIcon {
+    background: transparent;
+    color: #b8c3be;
+  }
+  #quarto-sidebar .aa-DetachedSearchButtonPlaceholder,
+  #quarto-sidebar input::placeholder { color: #9eaaa5; }
+  #quarto-sidebar .aa-DetachedSearchButtonIcon,
+  #quarto-sidebar .search-icon { color: #b8c3be; }
+
+  .quarto-secondary-nav {
+    border-bottom-color: var(--qa-line);
+    background: var(--qa-sidebar);
+    color: var(--qa-ink);
+  }
+  .quarto-secondary-nav .quarto-btn-toggle,
+  .quarto-secondary-nav .quarto-search-button,
+  .quarto-secondary-nav .breadcrumb-item,
+  .quarto-secondary-nav .breadcrumb-item a { color: #d5ddd9; }
+  .quarto-page-breadcrumbs .breadcrumb-item,
+  .quarto-page-breadcrumbs .breadcrumb-item a { color: var(--qa-muted); }
+  .breadcrumb-item + .breadcrumb-item::before { color: #7f8b86; }
+
+  #quarto-margin-sidebar,
+  #quarto-margin-sidebar #TOC { color: #c8d1cd; }
+  #quarto-margin-sidebar #toc-title { color: #e3e8e5; }
+  #quarto-margin-sidebar .nav-link { color: #bac5c0; }
+  #quarto-margin-sidebar .nav-link .header-section-number { color: inherit; opacity: .82; }
+  #quarto-margin-sidebar .nav-link:hover { color: #e7ece9; }
+  #quarto-margin-sidebar .nav-link.active {
+    border-left-color: var(--qa-link);
+    color: var(--qa-link);
+  }
+
+  #quarto-content section.qa-card > details > summary {
+    border-color: #52635c;
+    background: #101714;
+    color: #b9ddd5;
+  }
+  #quarto-content section.qa-card > details > summary:hover {
+    border-color: #78978e;
+    background: var(--qa-accent-soft);
+    color: #d8ebe6;
+  }
+  #quarto-content section.qa-card details .panel-tabset > .nav-tabs { background: var(--qa-surface-soft); }
+  #quarto-content section.qa-card details .panel-tabset .nav-link { color: #b6c1bc; }
+  #quarto-content section.qa-card details .panel-tabset .nav-link:hover {
+    background: #1c2823;
+    color: #e1e8e4;
+  }
+  #quarto-content section.qa-card details .panel-tabset .nav-link.active {
+    background: var(--qa-accent-soft);
+    color: #d8ebe6;
+  }
+  #quarto-content section.qa-card details .panel-tabset .tab-content { background: #090c0b; }
+  #quarto-content section.qa-card details .panel-tabset .tab-pane > h4 { color: #e2e8e5; }
+
+  #quarto-content table,
+  #quarto-content .table {
+    --bs-table-color: var(--qa-ink);
+    --bs-table-bg: transparent;
+    --bs-table-striped-color: var(--qa-ink);
+    --bs-table-striped-bg: rgb(255 255 255 / .035);
+    --bs-table-border-color: var(--qa-line);
+    color: var(--qa-ink);
+  }
+  #quarto-content blockquote {
+    border-left-color: #60716a;
+    color: #c8d1cd;
+  }
+  #quarto-content code { color: #dcc2f2; }
+  #quarto-content pre,
+  #quarto-content div.sourceCode {
+    border-color: var(--qa-line);
+    background: #050706;
+    color: var(--qa-ink);
+  }
+  #quarto-content pre code { color: inherit; }
+  #quarto-content hr { border-color: var(--qa-line); opacity: 1; }
+
+  .nav-page .nav-page-text,
+  .nav-page .nav-page-text:hover { color: var(--qa-ink); }
+  .page-navigation { border-top-color: var(--qa-line); }
 @media (max-width: 576px) {
   #quarto-content section.qa-card { padding-inline: 1rem; }
   #quarto-content section.qa-card details .panel-tabset > .nav-tabs { flex-wrap: nowrap; overflow-x: auto; }
