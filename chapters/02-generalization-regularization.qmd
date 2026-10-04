@@ -332,33 +332,33 @@ Cross-validation estimates a model-selection procedure only when every adaptive 
 
 Suppose you try many tree depths or regularization strengths. For each candidate $j$, cross-validation gives a noisy estimate of its true error:
 
-$
+$$
 \widehat E_j = E_j + \epsilon_j.
-$
+$$
 
 If you choose
 
-$
+$$
 j^*=\arg\min_j \widehat E_j,
-$
+$$
 
 then you tend to pick not only a genuinely good candidate, but also one whose noise $\epsilon_j$ happened to be favorable. Therefore
 
-$
+$$
 \widehat E_{j^*}
-$
+$$
 
 tends to underestimate the true error $E_{j^*}$. The same CV results were used both to **choose** the model and to **judge** it.
 
 A fresh test set avoids this circularity:
 
-$
+$$
 \text{CV on development data}
 \rightarrow
 \text{choose and freeze procedure}
 \rightarrow
 \text{test once}.
-$
+$$
 
 The test set is not used to improve the model. Its purpose is to provide an evaluation that did not participate in model selection.
 
@@ -381,13 +381,13 @@ For each outer fold $k$:
 
 Then average the outer-fold errors:
 
-$
+$$
 \widehat E_{\text{nested}}
 =
 \frac{1}{K}
 \sum_{k=1}^{K}
 L(D_k,\hat f_{-k}).
-$
+$$
 
 The inner folds perform model selection; the outer folds play the role of test data. Thus the outer estimate evaluates the **entire model-selection procedure**, not merely one already-chosen hyperparameter setting.
 
