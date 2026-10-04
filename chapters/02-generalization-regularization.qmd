@@ -201,7 +201,7 @@ The expression on the right is a leading-order illustration, not something to me
 
 The same mathematics applies when the noisy estimate comes from $K$-fold cross-validation rather than from one fixed validation split. For candidate $j$, write its cross-validated loss as
 
-$
+$$
 \widehat E_j^{\mathrm{CV}}
 =
 \frac{1}{K}
@@ -209,42 +209,42 @@ $
 L\!\left(D_k,\hat f_j^{(-k)}\right)
 =
 E_j+\epsilon_j,
-$
+$$
 
 where $\hat f_j^{(-k)}$ is trained without fold $k$, $E_j$ is the candidate's true expected generalization loss, and $\epsilon_j$ is finite-sample evaluation noise. If we use those same CV estimates to choose
 
-$
+$$
 j^*
 =
 \arg\min_j \widehat E_j^{\mathrm{CV}},
-$
+$$
 
 then the winning CV error has also been selected for looking unusually small.
 
 A clean special case makes the direction explicit. If all $M$ candidates have the same true error $E$ and
 
-$
+$$
 \epsilon_j\overset{\mathrm{iid}}{\sim}N(0,\sigma^2),
-$
+$$
 
 then
 
-$
+$$
 E\!\left[
 \widehat E_{j^*}^{\mathrm{CV}}-E
 \right]
 =
 E\!\left[\min_j\epsilon_j\right]
 <0,
-$
+$$
 
 and for large $M$,
 
-$
+$$
 E\!\left[\min_j\epsilon_j\right]
 \approx
 -\sigma\sqrt{2\log M}.
-$
+$$
 
 Thus cross-validation can reduce the noise of performance estimation, but it does not remove **selection bias** if the same CV results are used both to choose the candidate and to report how well the chosen candidate performs.
 
