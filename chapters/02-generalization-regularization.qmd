@@ -197,6 +197,57 @@ $$
 
 The expression on the right is a leading-order illustration, not something to memorize. Scores measured on the same validation set are usually correlated, so $M$ is not generally the number of independent comparisons. The conceptual point remains: trying more configurations raises the chance of finding one that looks unusually good by luck. For a loss that is minimized, the same optimism appears in the opposite direction—as an unusually low observed loss.
 
+#### Cross-Validation Selection Bias
+
+The same mathematics applies when the noisy estimate comes from $K$-fold cross-validation rather than from one fixed validation split. For candidate $j$, write its cross-validated loss as
+
+$
+\widehat E_j^{\mathrm{CV}}
+=
+\frac{1}{K}
+\sum_{k=1}^{K}
+L\!\left(D_k,\hat f_j^{(-k)}\right)
+=
+E_j+\epsilon_j,
+$
+
+where $\hat f_j^{(-k)}$ is trained without fold $k$, $E_j$ is the candidate's true expected generalization loss, and $\epsilon_j$ is finite-sample evaluation noise. If we use those same CV estimates to choose
+
+$
+j^*
+=
+\arg\min_j \widehat E_j^{\mathrm{CV}},
+$
+
+then the winning CV error has also been selected for looking unusually small.
+
+A clean special case makes the direction explicit. If all $M$ candidates have the same true error $E$ and
+
+$
+\epsilon_j\overset{\mathrm{iid}}{\sim}N(0,\sigma^2),
+$
+
+then
+
+$
+E\!\left[
+\widehat E_{j^*}^{\mathrm{CV}}-E
+\right]
+=
+E\!\left[\min_j\epsilon_j\right]
+<0,
+$
+
+and for large $M$,
+
+$
+E\!\left[\min_j\epsilon_j\right]
+\approx
+-\sigma\sqrt{2\log M}.
+$
+
+Thus cross-validation can reduce the noise of performance estimation, but it does not remove **selection bias** if the same CV results are used both to choose the candidate and to report how well the chosen candidate performs.
+
 #### Validation-Set Size
 
 For a fixed model evaluated on $n_{\text{val}}$ independent examples, suppose accuracy has true value $p$. Write each correctness indicator as
@@ -305,105 +356,101 @@ Limit unnecessary adaptive search, track all trials, compare meaningful effect s
 
 ### Q: When should you use cross-validation? When is it impractical? {#q-cross-validation .qa-card}
 
-**Short answer:** Use cross-validation when data are limited, examples are approximately exchangeable, and repeated training is affordable. It is impractical for expensive models and inappropriate when folds violate time, group, or information boundaries.
+**Short answer:** Use cross-validation when data are limited, examples are approximately exchangeable, and repeated training is affordable. It can both help choose hyperparameters and estimate performance, but those are different statistical roles: if CV is used to select the model, the winning CV score is itself selected and can be optimistic. Use a separate untouched test set, or nested cross-validation, when you need an evaluation that did not participate in model selection.
 
 <details><summary><strong>Expand explanation</strong></summary>
 
 ::: {.panel-tabset}
-#### Example
+#### How $K$-Fold CV Works
 
-Use time-based splits for forecasting and group-aware splits for users or patients. Random folds can leak information that will not exist at deployment.
-
-#### Common Mistakes
-
-Cross-validation estimates a model-selection procedure only when every adaptive step—including preprocessing and hyperparameter selection—is correctly nested inside the folds.
-:::
-</details>
-
-
-### Q: If $k$-fold cross-validation already uses the whole dataset, why keep a separate test set? {#q-cv-vs-test-set .qa-card}
-
-**Short answer:** You do not always need a permanent test set. If the entire learning procedure is fixed in advance and cross-validation is used only to estimate its performance, $k$-fold CV over the whole dataset can be enough. But if you use CV to choose hyperparameters, model class, pruning depth, regularization strength, or other decisions, the best CV score is itself selected from noisy estimates and is usually optimistic. A separate test set—or an outer loop of nested cross-validation—evaluates the frozen selection procedure without having influenced it.
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Intuition
-
-Suppose you try many tree depths or regularization strengths. For each candidate $j$, cross-validation gives a noisy estimate of its true error:
+Split the development data into $K$ folds $D_1,\ldots,D_K$. For a fixed candidate procedure $j$, train without fold $k$ and evaluate on fold $k$. Its cross-validated loss is
 
 $$
-\widehat E_j = E_j + \epsilon_j.
-$$
-
-If you choose
-
-$$
-j^*=\arg\min_j \widehat E_j,
-$$
-
-then you tend to pick not only a genuinely good candidate, but also one whose noise $\epsilon_j$ happened to be favorable. Therefore
-
-$$
-\widehat E_{j^*}
-$$
-
-tends to underestimate the true error $E_{j^*}$. The same CV results were used both to **choose** the model and to **judge** it.
-
-A fresh test set avoids this circularity:
-
-$$
-\text{CV on development data}
-\rightarrow
-\text{choose and freeze procedure}
-\rightarrow
-\text{test once}.
-$$
-
-The test set is not used to improve the model. Its purpose is to provide an evaluation that did not participate in model selection.
-
-#### When a Separate Test Set Is Not Necessary
-
-If every part of the learning procedure is specified before looking at the data-dependent evaluation results—model class, features, hyperparameters, training duration, thresholds, and selection rule—then ordinary cross-validation over the whole dataset can directly estimate that fixed procedure's generalization.
-
-The need for a separate test set arises mainly because real model development is adaptive: we look at validation/CV results and change what we do.
-
-#### Nested Cross-Validation
-
-When data are scarce, nested cross-validation can replace a permanent test split.
-
-For each outer fold $k$:
-
-1. Hold out outer fold $D_k$.
-2. On the remaining data $D_{-k}$, run **inner cross-validation** to choose hyperparameters.
-3. Refit the selected procedure on $D_{-k}$.
-4. Evaluate it once on untouched $D_k$.
-
-Then average the outer-fold errors:
-
-$$
-\widehat E_{\text{nested}}
+\widehat E_j^{\mathrm{CV}}
 =
 \frac{1}{K}
 \sum_{k=1}^{K}
-L(D_k,\hat f_{-k}).
+L\!\left(D_k,\hat f_j^{(-k)}\right).
 $$
 
-The inner folds perform model selection; the outer folds play the role of test data. Thus the outer estimate evaluates the **entire model-selection procedure**, not merely one already-chosen hyperparameter setting.
+Every example is used for validation exactly once and for training in the other $K-1$ runs. Values such as $K=5$ or $10$ are practical compromises rather than mathematically optimal constants.
+
+#### Why Keep a Test Set After CV?
+
+If the learning procedure was fixed before seeing the CV results and CV is used only to estimate its performance, ordinary CV over the whole dataset may be sufficient; a permanent test split is not logically mandatory.
+
+The situation changes when CV is used to choose among depths, regularization strengths, feature sets, architectures, or other candidates. Then
+
+$$
+j^*
+=
+\arg\min_j \widehat E_j^{\mathrm{CV}}
+$$
+
+depends on the CV data. The winning CV estimate has therefore participated in model selection. The [validation-overfitting argument](#q-validation-overfitting) shows mathematically why this winning score can be optimistic.
+
+A separate test set asks a different question:
+
+$$
+\text{CV-based selection}
+\rightarrow
+\text{freeze the procedure}
+\rightarrow
+\text{evaluate on untouched test data}.
+$$
+
+The test set is valuable precisely because it **does not improve the model**; it audits the completed selection procedure.
+
+#### Nested Cross-Validation
+
+When data are too limited to reserve a permanent test set, use an outer CV loop for evaluation and an inner CV loop for model selection.
+
+For each outer fold $D_k$:
+
+1. Hold out $D_k$.
+2. On $D_{-k}$, run inner cross-validation to choose hyperparameters.
+3. Refit the selected procedure on $D_{-k}$.
+4. Evaluate once on untouched $D_k$.
+
+The outer estimate is
+
+$$
+\widehat E_{\mathrm{nested}}
+=
+\frac{1}{K}
+\sum_{k=1}^{K}
+L\!\left(D_k,\hat f_{-k}^{\mathrm{selected}}\right).
+$$
+
+The inner folds choose the model; the outer folds estimate the performance of the **entire model-selection procedure**.
+
+#### Example
+
+For a decision tree, inner CV might choose among
+
+$$
+\text{max depth}\in\{2,3,5,8,12\}.
+$$
+
+For ridge regression, it might choose among several values of $\lambda$. Cross-validation is the selection/evaluation machinery; tree pruning or the ridge penalty is the regularization mechanism.
+
+Use time-based splits for forecasting and group-aware splits for users or patients. Random folds can leak information when examples are not exchangeable.
 
 #### Interview Rule
 
-- **Fixed procedure, only estimating performance:** ordinary CV may be sufficient.
-- **CV used to choose among candidates:** do not treat the winning CV score as an unbiased final estimate.
-- **Plenty of data:** reserve a final test set.
-- **Limited data:** use nested CV when the extra computation is affordable.
+- **Fixed procedure, only estimating performance:** ordinary CV may be enough.
+- **CV used to choose among candidates:** do not treat the winning CV score as a clean final estimate.
+- **Plenty of data:** preserve a final untouched test set.
+- **Limited data:** nested CV can provide an outer test-like evaluation.
+- **Very expensive models:** repeated CV training may be impractical; use a carefully designed validation/test split instead.
 
 #### Common Mistakes
 
-Cross-validation is not itself regularization. Ridge, Lasso, pruning, depth limits, and similar mechanisms change the learned model; CV is a method for choosing among such modeling decisions and estimating performance.
+Cross-validation is not itself regularization. Also, every adaptive step—including preprocessing, feature selection, threshold tuning, and hyperparameter search—must occur inside the appropriate fold. Performing those steps once on the full dataset before CV leaks information across folds.
 
 :::
 </details>
+
 
 ## Bias–Variance
 
@@ -942,6 +989,8 @@ L_{\text{test}}(\hat f_{\lambda^*})
 $$
 
 was not involved in choosing $\lambda$. It therefore gives a more credible estimate of the frozen selection procedure's generalization, assuming the test set is representative and remains untouched.
+
+This is the same model-selection bias formalized in [validation overfitting](#q-validation-overfitting); choosing $\lambda$ by CV simply replaces a single validation loss with a cross-validated loss estimate.
 
 #### Common Mistakes
 
