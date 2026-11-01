@@ -2,60 +2,6 @@
 
 The visible layer is for rapid interview revision. Expand a question to compare mechanisms, diagnostics, and natural follow-up paths.
 
-## Generalization and Overfitting
-
-### Q: What do generalization, overfitting, and underfitting mean? {#q-generalization-overfitting .qa-card}
-
-**Short answer:** Generalization is performance on new examples from the deployment distribution. Overfitting is fitting training-specific noise or accidental patterns, usually creating a train-to-held-out gap; underfitting is missing useful structure, so both training and held-out performance remain poor.
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Intuition
-
-Training loss only measures fit to observed data. A held-out score estimates generalization only when its examples and feature availability resemble future use.
-
-#### Example
-
-A model that memorizes rare label noise may have near-zero training loss but poor validation loss. A shallow model that cannot express a clear nonlinear relationship underfits.
-
-#### Follow-ups
-
-- How do you distinguish overfitting from distribution shift?
-- Why is training loss not a model-selection metric?
-:::
-</details>
-
-### Q: What is model capacity? Does a larger model necessarily overfit more? {#q-model-capacity .qa-card}
-
-**Short answer:** Capacity is the range and complexity of functions a learning procedure can fit. Larger models often have more capacity, but they do not necessarily generalize worse because data scale, architecture, optimization, and regularization determine effective behavior.
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Deep Dive
-
-Parameter count is an imperfect proxy. Pretraining, architecture, augmentation, and SGD’s optimization path constrain which of many possible functions is learned.
-
-#### Common Mistakes
-
-More capacity creates both the opportunity to fit more signal and the risk of fitting more noise; it does not guarantee overfitting.
-:::
-</details>
-
-### Q: What is inductive bias? {#q-inductive-bias .qa-card}
-
-**Short answer:** Inductive bias is the set of assumptions or preferences that lets a learner select one generalization beyond observed examples. It is unavoidable because many different functions can fit the same training data while predicting differently on unseen inputs.
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Example
-
-A CNN favors local, translation-related patterns; L2 favors smaller weights; a time split encodes that future information should not predict the past.
-:::
-</details>
-
 ## Train, Validation, and Test
 
 ### Q: What is the difference between the training, validation, and test sets? {#q-train-validation-test .qa-card}
@@ -146,6 +92,60 @@ The issue is information flow, not the size of the code change. A “tiny” cha
 - **What if I looked only once?** If the result changed a decision, it influenced selection; the size of the resulting optimism may be small, but the logical role changed.
 - **How do leaderboards get overfit?** Repeated submissions let participants adapt to finite benchmark noise, even when labels remain hidden.
 - **Why can old benchmarks become misleading?** Years of community-wide tuning can indirectly turn a benchmark into shared validation data.
+:::
+</details>
+
+## Generalization and Overfitting
+
+### Q: What do generalization, overfitting, and underfitting mean? {#q-generalization-overfitting .qa-card}
+
+**Short answer:** Generalization is performance on new examples from the deployment distribution. Overfitting is fitting training-specific noise or accidental patterns, usually creating a train-to-held-out gap; underfitting is missing useful structure, so both training and held-out performance remain poor.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Training loss only measures fit to observed data. A held-out score estimates generalization only when its examples and feature availability resemble future use.
+
+#### Example
+
+A model that memorizes rare label noise may have near-zero training loss but poor validation loss. A shallow model that cannot express a clear nonlinear relationship underfits.
+
+#### Follow-ups
+
+- How do you distinguish overfitting from distribution shift?
+- Why is training loss not a model-selection metric?
+:::
+</details>
+
+### Q: What is model capacity? Does a larger model necessarily overfit more? {#q-model-capacity .qa-card}
+
+**Short answer:** Capacity is the range and complexity of functions a learning procedure can fit. Larger models often have more capacity, but they do not necessarily generalize worse because data scale, architecture, optimization, and regularization determine effective behavior.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Deep Dive
+
+Parameter count is an imperfect proxy. Pretraining, architecture, augmentation, and SGD’s optimization path constrain which of many possible functions is learned.
+
+#### Common Mistakes
+
+More capacity creates both the opportunity to fit more signal and the risk of fitting more noise; it does not guarantee overfitting.
+:::
+</details>
+
+### Q: What is inductive bias? {#q-inductive-bias .qa-card}
+
+**Short answer:** Inductive bias is the set of assumptions or preferences that lets a learner select one generalization beyond observed examples. It is unavoidable because many different functions can fit the same training data while predicting differently on unseen inputs.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Example
+
+A CNN favors local, translation-related patterns; L2 favors smaller weights; a time split encodes that future information should not predict the past.
 :::
 </details>
 

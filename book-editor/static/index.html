@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>ML Interview Prep — Book Editor</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <button class="icon-button mobile-only" id="menu-button" aria-label="Open navigation">☰</button>
+        <div class="brand">
+          <span class="brand-mark">ML</span>
+          <div>
+            <strong>Book Editor</strong>
+            <small>ML Interview Prep</small>
+          </div>
+        </div>
+        <div class="top-actions">
+          <span class="save-state" id="save-state">Ready</span>
+          <button class="button secondary" id="preview-button">Open preview</button>
+          <button class="button secondary" id="render-button">Render book</button>
+          <button class="button primary" id="save-button" disabled>Save changes</button>
+        </div>
+      </header>
+
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-head">
+          <label class="search-box">
+            <span>⌕</span>
+            <input id="search-input" type="search" placeholder="Search chapters and questions" />
+          </label>
+          <p class="reorder-hint">Drag to preview · Drop to save · Render updates HTML</p>
+        </div>
+        <nav id="book-tree" class="book-tree" aria-label="Book contents"></nav>
+        <div class="sidebar-footer">
+          <span class="status-dot" id="git-dot"></span>
+          <span id="git-status">Checking repository…</span>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section id="empty-state" class="empty-state">
+          <div class="empty-icon">✦</div>
+          <h1>Edit the book without wrestling with file structure</h1>
+          <p>Select a chapter, section, or question from the left. Your Markdown and TeX remain untouched unless you explicitly save.</p>
+        </section>
+
+        <section id="editor-view" class="editor-view hidden">
+          <div class="editor-header">
+            <div>
+              <div class="eyebrow" id="editor-kind">QUESTION</div>
+              <h1 id="editor-title">Select an item</h1>
+              <div class="file-meta"><span id="file-path"></span><span id="line-number"></span></div>
+            </div>
+            <div class="mode-switch" role="tablist" aria-label="Editor mode">
+              <button class="active" data-mode="structured">Structured</button>
+              <button data-mode="raw">Raw QMD</button>
+            </div>
+          </div>
+
+          <div id="structured-editor" class="editor-panel"></div>
+          <div id="raw-editor" class="editor-panel hidden">
+            <div class="field-head">
+              <label for="raw-content">Raw Quarto Markdown</label>
+              <span>Use this for structures the form does not expose.</span>
+            </div>
+            <textarea id="raw-content" class="code-editor" spellcheck="false"></textarea>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div id="toast-region" class="toast-region" aria-live="polite"></div>
+
+    <dialog id="render-dialog" class="render-dialog">
+      <div class="dialog-head">
+        <div>
+          <div class="eyebrow">QUARTO</div>
+          <h2>Render output</h2>
+        </div>
+        <button class="icon-button" id="close-dialog" aria-label="Close">×</button>
+      </div>
+      <div class="render-status" id="render-status">Rendering…</div>
+      <pre id="render-output"></pre>
+      <div class="dialog-actions">
+        <button class="button secondary" id="dialog-preview">Open rendered book</button>
+        <button class="button primary" id="dialog-done">Done</button>
+      </div>
+    </dialog>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

@@ -1,4 +1,4 @@
-# Optimization and Training Dynamics
+# Optimization and Training Dynamics of ML Systems
 
 This chapter will connect optimization choices to observed training behavior, while keeping optimization distinct from generalization.
 

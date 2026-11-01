@@ -12,6 +12,19 @@ quarto render
 
 The rendered HTML book is written to `_book/`. Preview it interactively with `quarto preview`.
 
+## Edit with the local GUI
+
+If you prefer not to edit Quarto Markdown directly, start the local book editor:
+
+```bash
+python3 book-editor/server.py
+```
+
+It provides structured chapter, section, question, short-answer, and explanation-tab
+editing while keeping the existing `.qmd` files as the source of truth. Every save
+creates a local backup, and the GUI can render and open the finished book. See
+[`book-editor/README.md`](book-editor/README.md) for details.
+
 ## Structure
 
 - **Core ML Foundations** — probability and objectives, generalization and regularization, optimization, and core models.

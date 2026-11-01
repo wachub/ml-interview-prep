@@ -82,6 +82,20 @@ Do not use a Gaussian merely because a variable is numerical. Check for bounds, 
 :::
 </details>
 
+### Q: Hi there {.qa-card}
+
+**Short answer:** Yo
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+
+#### Intuition
+
+Yo yo
+:::
+</details>
+
 ## Expectation and Variance
 
 ### Q: What is expectation? {.qa-card}
@@ -132,6 +146,7 @@ $E[X^2]$ is not $(E[X])^2$. The difference between them is central to variance.
 
 ### Q: What is variance? State a useful equivalent identity. {.qa-card}
 
+
 **Short answer:** Variance measures squared spread around the mean:
 
 $$
@@ -154,9 +169,12 @@ Squaring prevents positive and negative deviations from cancelling and gives lar
 #### ML Connection
 
 Variance distinguishes an estimate that is stable across samples from one that changes greatly when the training set changes.
+
+#### New Tab
+
+
 :::
 </details>
-
 ### Q: Using the fair-die result, compute $\operatorname{Var}(X)$. {.qa-card}
 
 **Short answer:** From $E[X]=3.5$ and $E[X^2]=91/6$,
@@ -181,29 +199,6 @@ Using $E[X^2]-E[X]^2$ avoids calculating six squared deviations directly. Both m
 
 ## Conditional Probability and Independence
 
-### Q: What is conditional probability? {.qa-card}
-
-**Short answer:** For $P(B)>0$, conditional probability is
-
-$$
-P(A\mid B)=\frac{P(A\cap B)}{P(B)}.
-$$
-
-It is the probability of $A$ after restricting attention to outcomes where $B$ occurred.
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Example
-
-From a 52-card deck, given that a drawn card is a face card, the probability it is a king is $4/12=1/3$, not $4/52$.
-
-#### ML Connection
-
-Supervised probabilistic classifiers estimate quantities such as $P(Y\mid X)$, the class probability after observing features.
-:::
-</details>
-
 ### Q: What does independence mean? Give an application. {.qa-card}
 
 **Short answer:** Events $A$ and $B$ are independent when
@@ -224,6 +219,29 @@ Let $A$ be “first toss is heads” and $B$ be “second toss is heads.” Then
 #### Common Mistakes
 
 Mutually exclusive nonzero-probability events are not independent: if one happens, the other cannot.
+:::
+</details>
+
+### Q: What is conditional probability? {.qa-card}
+
+**Short answer:** For $P(B)>0$, conditional probability is
+
+$$
+P(A\mid B)=\frac{P(A\cap B)}{P(B)}.
+$$
+
+It is the probability of $A$ after restricting attention to outcomes where $B$ occurred.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Example
+
+From a 52-card deck, given that a drawn card is a face card, the probability it is a king is $4/12=1/3$, not $4/52$.
+
+#### ML Connection
+
+Supervised probabilistic classifiers estimate quantities such as $P(Y\mid X)$, the class probability after observing features.
 :::
 </details>
 
