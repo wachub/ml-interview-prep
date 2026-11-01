@@ -2,11 +2,11 @@
 
 This chapter will favor durable concepts for reasoning about language-model training, adaptation, evaluation, and serving.
 
-## Tokenization and next-token prediction
-
 ## Pretraining and scaling intuition
 
 ## Decoding: temperature, top-k, and top-p
+
+## Tokenization and next-token prediction
 
 ## Context windows and KV caching
 

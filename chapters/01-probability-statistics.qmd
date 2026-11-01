@@ -36,7 +36,6 @@ Several outcomes can map to the same random-variable value: both $HT$ and $TH$ m
 - What values can $X$ take? The support is $\{0,1,2\}$.
 :::
 </details>
-
 ### Q: What is a random variable? {.qa-card}
 
 **Short answer:** A random variable is a function
@@ -98,6 +97,8 @@ Yo yo
 
 ## Expectation and Variance
 
+<!-- book-editor:hidden-question:start -->
+:::: {.content-hidden when-format="html"}
 ### Q: What is expectation? {.qa-card}
 
 **Short answer:** For a discrete random variable, expectation is its probability-weighted average:
@@ -120,7 +121,10 @@ Expectation is the average value over repeated draws, weighted by how often each
 Many learning objectives minimize an expected loss; empirical risk is the sample-based approximation used in practice.
 :::
 </details>
-
+::::
+<!-- book-editor:hidden-question:end -->
+<!-- book-editor:hidden-question:start -->
+:::: {.content-hidden when-format="html"}
 ### Q: A fair six-sided die is rolled once. What are $E[X]$ and $E[X^2]$? {.qa-card}
 
 **Short answer:**
@@ -143,7 +147,8 @@ $$
 $E[X^2]$ is not $(E[X])^2$. The difference between them is central to variance.
 :::
 </details>
-
+::::
+<!-- book-editor:hidden-question:end -->
 ### Q: What is variance? State a useful equivalent identity. {.qa-card}
 
 
@@ -242,129 +247,6 @@ From a 52-card deck, given that a drawn card is a face card, the probability it 
 #### ML Connection
 
 Supervised probabilistic classifiers estimate quantities such as $P(Y\mid X)$, the class probability after observing features.
-:::
-</details>
-
-## Covariance and Correlation
-
-### Q: What are covariance and correlation? {.qa-card}
-
-**Short answer:** Covariance measures whether two variables tend to deviate from their means in the same direction:
-
-$$
-\operatorname{Cov}(X,Y)=E[(X-E[X])(Y-E[Y])].
-$$
-
-Correlation standardizes it:
-
-$$
-\rho_{X,Y}=\frac{\operatorname{Cov}(X,Y)}{\sigma_X\sigma_Y},
-$$
-
-when both standard deviations are nonzero.
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Intuition
-
-Positive covariance means above-average values tend to occur together; negative covariance means one tends to be below average when the other is above. Correlation is unitless.
-
-#### Common Mistakes
-
-Neither covariance nor correlation establishes causation.
-:::
-</details>
-
-### Q: Does zero covariance imply independence? {.qa-card}
-
-**Short answer:** No. Zero covariance means there is no linear association captured by covariance, but variables can still have a nonlinear dependence. It does imply independence only under additional conditions, such as joint Gaussianity.
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Example
-
-If $X$ is symmetric around zero and $Y=X^2$, then $Y$ is completely determined by $X$ but $\operatorname{Cov}(X,Y)$ can be zero.
-
-#### Follow-ups
-
-- Why can correlated input features still be useful for prediction?
-- What makes correlation a possible leakage warning?
-:::
-</details>
-
-## Likelihood and Estimation
-
-### Q: What are likelihood and maximum likelihood estimation? {#q-likelihood-mle .qa-card}
-
-**Short answer:** Given observed data $x_1,\ldots,x_n$ and parameter $\theta$, likelihood is
-
-$$
-L(\theta)=P(x_1,\ldots,x_n\mid\theta)
-$$
-
-for discrete data, or the corresponding density for continuous data. MLE chooses
-
-$$
-\hat\theta_{\mathrm{MLE}}=\arg\max_\theta L(\theta).
-$$
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Intuition
-
-Probability varies possible data with parameters fixed; likelihood fixes the data and compares parameter settings.
-
-#### ML Connection
-
-Choosing a likelihood family chooses a loss after taking negative log-likelihood.
-:::
-</details>
-
-### Q: A coin is tossed 10 times and lands heads 7 times. What is the MLE of its probability of heads? {.qa-card}
-
-**Short answer:** If $p$ is the head probability, the Binomial likelihood is proportional to $p^7(1-p)^3$. Its maximizer is
-
-$$
-\hat p_{\mathrm{MLE}}=\frac{7}{10}=0.7.
-$$
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Mathematical View
-
-Maximizing $7\log p+3\log(1-p)$ gives $7/p-3/(1-p)=0$, hence $p=0.7$.
-
-#### Follow-ups
-
-- Why maximize log-likelihood rather than likelihood?
-- What changes with a Beta prior on $p$?
-:::
-</details>
-
-### Q: Why maximize log-likelihood? What is MAP, and how does it relate to regularization? {.qa-card}
-
-**Short answer:** Logarithms preserve the maximizing parameter, turn products into sums, and avoid numerical underflow. MAP chooses
-
-$$
-\hat\theta_{\mathrm{MAP}}=\arg\max_\theta P(\theta\mid D),
-$$
-
-so it combines likelihood with a prior; many regularizers are negative log-priors.
-
-<details><summary><strong>Expand explanation</strong></summary>
-
-::: {.panel-tabset}
-#### Mathematical View
-
-MAP maximizes $\log P(D\mid\theta)+\log P(\theta)$. A zero-mean Gaussian prior on weights gives an L2 penalty under compatible scaling.
-
-#### Common Mistakes
-
-MAP selects one posterior mode. It is not the same as fully Bayesian prediction, which averages over posterior uncertainty.
 :::
 </details>
 
@@ -925,6 +807,129 @@ The KL term is not primarily there because the reference model is assumed to be 
 :::
 </details>
 
+
+## Likelihood and Estimation
+
+### Q: What are likelihood and maximum likelihood estimation? {#q-likelihood-mle .qa-card}
+
+**Short answer:** Given observed data $x_1,\ldots,x_n$ and parameter $\theta$, likelihood is
+
+$$
+L(\theta)=P(x_1,\ldots,x_n\mid\theta)
+$$
+
+for discrete data, or the corresponding density for continuous data. MLE chooses
+
+$$
+\hat\theta_{\mathrm{MLE}}=\arg\max_\theta L(\theta).
+$$
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Probability varies possible data with parameters fixed; likelihood fixes the data and compares parameter settings.
+
+#### ML Connection
+
+Choosing a likelihood family chooses a loss after taking negative log-likelihood.
+:::
+</details>
+
+### Q: A coin is tossed 10 times and lands heads 7 times. What is the MLE of its probability of heads? {.qa-card}
+
+**Short answer:** If $p$ is the head probability, the Binomial likelihood is proportional to $p^7(1-p)^3$. Its maximizer is
+
+$$
+\hat p_{\mathrm{MLE}}=\frac{7}{10}=0.7.
+$$
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Mathematical View
+
+Maximizing $7\log p+3\log(1-p)$ gives $7/p-3/(1-p)=0$, hence $p=0.7$.
+
+#### Follow-ups
+
+- Why maximize log-likelihood rather than likelihood?
+- What changes with a Beta prior on $p$?
+:::
+</details>
+
+### Q: Why maximize log-likelihood? What is MAP, and how does it relate to regularization? {.qa-card}
+
+**Short answer:** Logarithms preserve the maximizing parameter, turn products into sums, and avoid numerical underflow. MAP chooses
+
+$$
+\hat\theta_{\mathrm{MAP}}=\arg\max_\theta P(\theta\mid D),
+$$
+
+so it combines likelihood with a prior; many regularizers are negative log-priors.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Mathematical View
+
+MAP maximizes $\log P(D\mid\theta)+\log P(\theta)$. A zero-mean Gaussian prior on weights gives an L2 penalty under compatible scaling.
+
+#### Common Mistakes
+
+MAP selects one posterior mode. It is not the same as fully Bayesian prediction, which averages over posterior uncertainty.
+:::
+</details>
+
+## Covariance and Correlation
+
+### Q: What are covariance and correlation? {.qa-card}
+
+**Short answer:** Covariance measures whether two variables tend to deviate from their means in the same direction:
+
+$$
+\operatorname{Cov}(X,Y)=E[(X-E[X])(Y-E[Y])].
+$$
+
+Correlation standardizes it:
+
+$$
+\rho_{X,Y}=\frac{\operatorname{Cov}(X,Y)}{\sigma_X\sigma_Y},
+$$
+
+when both standard deviations are nonzero.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Intuition
+
+Positive covariance means above-average values tend to occur together; negative covariance means one tends to be below average when the other is above. Correlation is unitless.
+
+#### Common Mistakes
+
+Neither covariance nor correlation establishes causation.
+:::
+</details>
+
+### Q: Does zero covariance imply independence? {.qa-card}
+
+**Short answer:** No. Zero covariance means there is no linear association captured by covariance, but variables can still have a nonlinear dependence. It does imply independence only under additional conditions, such as joint Gaussianity.
+
+<details><summary><strong>Expand explanation</strong></summary>
+
+::: {.panel-tabset}
+#### Example
+
+If $X$ is symmetric around zero and $Y=X^2$, then $Y$ is completely determined by $X$ but $\operatorname{Cov}(X,Y)$ can be zero.
+
+#### Follow-ups
+
+- Why can correlated input features still be useful for prediction?
+- What makes correlation a possible leakage warning?
+:::
+</details>
 
 ## Concept Reference
 

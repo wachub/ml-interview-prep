@@ -23,6 +23,10 @@ function escapeHtml(value = "") {
   })[character]);
 }
 
+function visibilityIcon(hidden) {
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.4-6 9.5-6 9.5 6 9.5 6-3.4 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.5"/>${hidden ? '<path d="m4 4 16 16"/>' : ""}</svg>`;
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     headers: options.body ? { "Content-Type": "application/json" } : {},
@@ -81,9 +85,8 @@ async function loadBook() {
     const number = chapterNumber(item.path);
     return `
     ${index === 0 || state.book.documents[index - 1].group !== item.group ? `<div class="group-label" data-animation-key="group:${escapeHtml(item.group)}">${escapeHtml(item.groupLabel)}</div>` : ""}
-    <div class="document-node ${fixed ? "" : "draggable-node"}" draggable="${!fixed}" data-move-kind="chapter" data-move-id="${escapeHtml(item.path)}" data-move-path="${escapeHtml(item.path)}" data-path="${escapeHtml(item.path)}" data-animation-key="chapter:${escapeHtml(item.path)}" title="${fixed ? "Book home page stays first" : "Drag to reorder chapters"}">
+    <div class="document-node ${fixed ? "" : "draggable-node"}" data-move-kind="chapter" data-move-id="${escapeHtml(item.path)}" data-move-path="${escapeHtml(item.path)}" data-path="${escapeHtml(item.path)}" data-animation-key="chapter:${escapeHtml(item.path)}" title="${fixed ? "Book home page stays first" : "Drag to reorder chapters"}">
       <div class="tree-row">
-      ${fixed ? '<span class="drag-spacer" aria-hidden="true"></span>' : '<span class="drag-grip" aria-hidden="true">⠿</span>'}
       <button class="document-button" data-action="open-document" data-path="${escapeHtml(item.path)}">
         <span class="chevron">›</span>
         <span class="outline-number chapter-number">${number}</span>
@@ -109,14 +112,16 @@ function renderDocumentChildren(documentData, expand = false) {
   ];
   documentData.sections.forEach((section, sectionIndex) => {
     const hasQuestions = section.questions.length > 0;
+    const hiddenQuestionCount = section.questions.filter((question) => question.hidden).length;
     const sectionNumber = `${chapter}.${sectionIndex + 1}`;
-    items.push(`<div class="section-node draggable-node ${expandedSections.has(section.id) ? "open" : ""} ${hasQuestions ? "has-questions" : ""}" draggable="true" data-move-kind="section" data-move-id="${section.id}" data-move-path="${escapeHtml(documentData.path)}" data-section-id="${section.id}" data-animation-key="section:${escapeHtml(section.animationKey || section.id)}" title="Drag to reorder within this chapter"><div class="tree-row"><span class="drag-grip" aria-hidden="true">⠿</span>
+    items.push(`<div class="section-node draggable-node ${expandedSections.has(section.id) ? "open" : ""} ${hasQuestions ? "has-questions" : ""}" data-move-kind="section" data-move-id="${section.id}" data-move-path="${escapeHtml(documentData.path)}" data-section-id="${section.id}" data-animation-key="section:${escapeHtml(section.animationKey || section.id)}" title="Drag to reorder within this chapter"><div class="tree-row">
       <button class="tree-item section" data-kind="section" data-node-id="${section.id}" data-path="${escapeHtml(documentData.path)}" ${hasQuestions ? `aria-expanded="${expandedSections.has(section.id)}"` : ""}>
-        <span class="section-chevron" aria-hidden="true">${hasQuestions ? "›" : ""}</span><span class="outline-number section-number">${sectionNumber}</span><span class="section-label">${escapeHtml(section.title)}</span>
+        <span class="section-chevron" aria-hidden="true">${hasQuestions ? "›" : ""}</span><span class="outline-number section-number">${sectionNumber}</span><span class="section-label">${escapeHtml(section.title)}</span>${hiddenQuestionCount ? `<span class="hidden-indicator" role="img" aria-label="${hiddenQuestionCount} hidden question${hiddenQuestionCount === 1 ? "" : "s"}" title="${hiddenQuestionCount} hidden question${hiddenQuestionCount === 1 ? "" : "s"}">${visibilityIcon(true)}</span>` : ""}
       </button></div><div class="section-children">`);
     section.questions.forEach((question, questionIndex) => {
       const label = question.title ? `Q: ${question.title}` : "Question (raw QMD)";
-      items.push(`<div class="question-node draggable-node tree-row" draggable="true" data-move-kind="question" data-move-id="${question.id}" data-move-path="${escapeHtml(documentData.path)}" data-animation-key="question:${escapeHtml(question.animationKey || question.id)}" title="Drag to reorder within this section"><span class="drag-grip" aria-hidden="true">⠿</span><button class="tree-item question" data-node-id="${question.id}" data-path="${escapeHtml(documentData.path)}"><span class="outline-number question-number">${sectionNumber}.${questionIndex + 1}</span><span class="question-label">${escapeHtml(label)}</span></button></div>`);
+      const action = question.hidden ? "Show question in rendered book" : "Hide question from rendered book";
+      items.push(`<div class="question-node draggable-node tree-row ${question.hidden ? "is-hidden-question" : ""}" data-move-kind="question" data-move-id="${question.id}" data-move-path="${escapeHtml(documentData.path)}" data-animation-key="question:${escapeHtml(question.animationKey || question.id)}" title="Drag to reorder within this section"><button class="tree-item question" data-node-id="${question.id}" data-path="${escapeHtml(documentData.path)}"><span class="outline-number question-number">${sectionNumber}.${questionIndex + 1}</span><span class="question-label">${escapeHtml(label)}</span></button><button class="visibility-toggle ${question.hidden ? "is-hidden" : ""}" type="button" data-action="toggle-question-visibility" data-node-id="${question.id}" data-path="${escapeHtml(documentData.path)}" data-hidden="${question.hidden}" aria-label="${action}" title="${action}">${visibilityIcon(question.hidden)}</button></div>`);
     });
     items.push("</div></div>");
   });
@@ -215,6 +220,8 @@ function showNode(node) {
   $("#file-path").textContent = state.document.path;
   $("#line-number").textContent = `line ${node.line || 1}`;
   rawContent.value = node.raw;
+  const questionActions = $("#question-actions");
+  questionActions.classList.toggle("hidden", node.kind !== "question" || Boolean(node.isNew));
   renderStructuredEditor();
   setMode(state.mode);
   setDirty(false);
@@ -378,6 +385,9 @@ async function saveSelection() {
     }
   }
   let replacement = state.mode === "raw" ? rawContent.value : buildStructuredRaw();
+  if (node.kind === "question" && node.hidden) {
+    replacement = `<!-- book-editor:hidden-question:start -->\n:::: {.content-hidden when-format="html"}\n${replacement.replace(/\s*$/, "")}\n::::\n<!-- book-editor:hidden-question:end -->\n`;
+  }
   if (node.isNew) {
     const validHeading = node.kind === "section" ? /^##(?!#)\s+\S/m.test(replacement) : /^### Q:\s*\S/m.test(replacement);
     if (!validHeading) {
@@ -428,6 +438,17 @@ async function renderBook() {
   dialog.showModal();
   try {
     const result = await api("/api/render", { method: "POST", body: "{}" });
+    if (result.migrated?.length) {
+      const selectedPath = state.document?.path;
+      const selectedId = state.selection?.id;
+      await loadBook();
+      if (selectedPath && result.migrated.some((item) => item.path === selectedPath)) {
+        state.document = await api(`/api/document?path=${encodeURIComponent(selectedPath)}`);
+        renderDocumentChildren(state.document, true);
+        selectNode(findNode(selectedId) ? selectedId : "intro");
+      }
+      toast(`Updated ${result.migrated.length} chapter${result.migrated.length === 1 ? "" : "s"} to use Quarto hidden-content blocks.`);
+    }
     $("#render-output").textContent = result.output || "Render completed without console output.";
     $("#render-status").textContent = result.ok ? "Render succeeded" : `Render failed (exit ${result.returnCode})`;
     $("#render-status").className = `render-status ${result.ok ? "success" : "error"}`;
@@ -440,6 +461,43 @@ async function renderBook() {
     $("#render-button").disabled = false;
     $("#preview-button").disabled = false;
   }
+}
+
+async function setQuestionHidden(path, questionId, hidden) {
+  if (!canLeave()) return;
+  const selectedPath = state.document?.path;
+  const selectedId = state.selection?.id;
+  try {
+    const documentData = selectedPath === path ? state.document : await api(`/api/document?path=${encodeURIComponent(path)}`);
+    const result = await api("/api/question-visibility", {
+      method: "POST",
+      body: JSON.stringify({ path, questionId, hidden, expectedHash: documentData.hash }),
+    });
+    if (selectedPath === path) state.document = result.document;
+    renderDocumentChildren(result.document);
+    if (selectedPath === path && selectedId) selectNode(findNode(selectedId) ? selectedId : "intro");
+    toast(`Question ${hidden ? "hidden" : "shown"}. Render to update the HTML preview. Backup: ${result.backup}`);
+    await refreshGitStatus();
+  } catch (error) { toast(error.message, "error"); }
+}
+
+async function deleteQuestion() {
+  const node = state.selection;
+  if (!node || node.kind !== "question" || node.isNew || !canLeave()) return;
+  const name = node.title ? `“${node.title}”` : "this question";
+  if (!window.confirm(`Delete ${name} and its answer content from the Quarto source? This cannot be undone from the editor. A backup copy will be made first.`)) return;
+  try {
+    const result = await api("/api/delete-question", {
+      method: "POST",
+      body: JSON.stringify({ path: state.document.path, questionId: node.id, expectedHash: state.document.hash }),
+    });
+    state.document = result.document;
+    await loadBook();
+    renderDocumentChildren(state.document, true);
+    selectNode("intro");
+    toast(`Question deleted. Backup: ${result.backup}`);
+    await refreshGitStatus();
+  } catch (error) { toast(error.message, "error"); }
 }
 
 async function refreshGitStatus() {
@@ -484,6 +542,9 @@ let moving = false;
 let autoScrollFrame = 0;
 let autoScrollStep = 0;
 let activeRowAnimations = [];
+let dragCandidate = null;
+let dragPointer = null;
+let suppressNextTreeClick = false;
 
 function sectionKey(section) {
   return `${section.title}\u0000${section.raw}`;
@@ -522,6 +583,7 @@ function updateAutoScroll(pointerY) {
   const tick = () => {
     if (!draggedItem || !autoScrollStep) { autoScrollFrame = 0; return; }
     tree.scrollTop += autoScrollStep;
+    if (dragPointer) previewDragAt(dragPointer.x, dragPointer.y);
     autoScrollFrame = requestAnimationFrame(tick);
   };
   autoScrollFrame = requestAnimationFrame(tick);
@@ -606,7 +668,20 @@ function restoreDragPreview(item) {
   item.originalParent.insertBefore(item.sourceNode, item.originalNextSibling);
   updateOutlineNumbers();
   animateReorder(item.kind, item.path, before, item.sourceNode.dataset.animationKey, true);
+  restoreChapterExpansion(item);
   restoreExpandedSections(item.path, item.expandedKeys);
+}
+
+function restoreChapterExpansion(item) {
+  if (!item?.openDocumentPaths) return;
+  for (const path of item.openDocumentPaths) {
+    const documentNode = tree.querySelector(`.document-node[data-path="${CSS.escape(path)}"]`);
+    documentNode?.classList.add("open");
+    for (const id of item.openSectionIds.get(path) || []) {
+      const sectionNode = documentNode?.querySelector(`.section-node[data-section-id="${CSS.escape(id)}"]`);
+      if (sectionNode?.classList.contains("has-questions")) setSectionOpen(sectionNode, true);
+    }
+  }
 }
 
 async function reorder(kind, source, target, path, position, expandedKeys = null, dragContext = null) {
@@ -639,6 +714,7 @@ async function reorder(kind, source, target, path, position, expandedKeys = null
     }
     tree.scrollTop = previousScroll;
     await animateReorder(kind, path, before, movedKey);
+    restoreChapterExpansion(dragContext);
     restoreExpandedSections(path, expandedKeys);
     const movedRow = kind === "chapter" ? tree.querySelector(`.document-node[data-path="${CSS.escape(source)}"] > .tree-row`)
       : kind === "section" ? tree.querySelector(`.section-node[data-section-id="${CSS.escape(result.selectedId)}"] > .tree-row`)
@@ -654,13 +730,8 @@ async function reorder(kind, source, target, path, position, expandedKeys = null
   finally { moving = false; }
 }
 
-tree.addEventListener("dragstart", (event) => {
-  const node = event.target.closest(".draggable-node");
-  if (!node || state.dirty) {
-    event.preventDefault();
-    if (state.dirty) toast("Save your current edits before dragging items.", "error");
-    return;
-  }
+function beginTreeDrag(node) {
+  if (state.dirty) { toast("Save your current edits before dragging items.", "error"); return false; }
   draggedItem = {
     kind: node.dataset.moveKind,
     id: node.dataset.moveId,
@@ -674,65 +745,153 @@ tree.addEventListener("dragstart", (event) => {
   if (draggedItem.kind === "section") {
     draggedItem.expandedKeys = expandedSectionKeys(draggedItem.path);
     node.closest(".document-node")?.querySelectorAll(".section-node.open").forEach((section) => setSectionOpen(section, false));
+  } else if (draggedItem.kind === "chapter") {
+    const openDocuments = Array.from(tree.querySelectorAll(".document-node.open"));
+    draggedItem.openDocumentPaths = openDocuments.map((documentNode) => documentNode.dataset.path);
+    draggedItem.openSectionIds = new Map(openDocuments.map((documentNode) => [documentNode.dataset.path,
+      Array.from(documentNode.querySelectorAll(".section-node.open"), (section) => section.dataset.sectionId)]));
+    openDocuments.forEach((documentNode) => documentNode.classList.remove("open"));
   }
-  event.dataTransfer.effectAllowed = "move";
-  event.dataTransfer.setData("text/plain", draggedItem.id);
   node.classList.add("dragging");
+  tree.classList.add("drag-active");
+  document.body.classList.add("reordering");
+  return true;
+}
+
+function validDragTarget(node, item) {
+  if (!node || node === item.sourceNode || node.dataset.moveKind !== item.kind) return false;
+  if (item.kind !== "chapter" && node.dataset.movePath !== item.path) return false;
+  if (item.kind === "question" && node.closest(".section-node") !== item.sourceNode.closest(".section-node")) return false;
+  if (item.kind === "chapter") {
+    const sourceGroup = state.book.documents.find((documentData) => documentData.path === item.id)?.group;
+    const targetGroup = state.book.documents.find((documentData) => documentData.path === node.dataset.moveId)?.group;
+    if (sourceGroup !== targetGroup && !(sourceGroup?.startsWith("part-") && targetGroup?.startsWith("part-"))) return false;
+  }
+  return true;
+}
+
+function previewDragAt(x, y) {
+  const item = draggedItem;
+  if (!item) return;
+  const bounds = tree.getBoundingClientRect();
+  if (x < bounds.left || x > bounds.right || y < bounds.top || y > bounds.bottom) return;
+  const selector = `.draggable-node[data-move-kind="${item.kind}"]`;
+  const hit = document.elementFromPoint(x, y);
+  let node = hit?.closest(selector);
+  if (node && !validDragTarget(node, item)) return;
+  if (!node) {
+    const nearby = Array.from(reorderRows(item.kind, item.path)).filter((candidate) => candidate.matches(selector) && validDragTarget(candidate, item));
+    let distance = Infinity;
+    node = null;
+    for (const candidate of nearby) {
+      const row = candidate.matches(".tree-row") ? candidate : candidate.querySelector(":scope > .tree-row");
+      const rect = row.getBoundingClientRect();
+      const gap = y < rect.top ? rect.top - y : Math.max(0, y - rect.bottom);
+      if (gap < distance) { distance = gap; node = candidate; }
+    }
+    if (distance > 28) return;
+  }
+  const row = node.matches(".tree-row") ? node : node.querySelector(":scope > .tree-row");
+  const after = y > row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2;
+  const reference = after ? node.nextSibling : node;
+  item.previewTarget = node.dataset.moveId;
+  item.previewPosition = after ? "after" : "before";
+  if (reference === item.sourceNode || item.sourceNode.nextSibling === reference) return;
+  const before = rowPositions(item.kind, item.path);
+  node.parentElement.insertBefore(item.sourceNode, reference);
+  item.previewChanged = item.sourceNode.parentElement !== item.originalParent
+    || item.sourceNode.nextElementSibling !== item.originalNextElementSibling;
+  updateOutlineNumbers();
+  animateReorder(item.kind, item.path, before, item.sourceNode.dataset.animationKey, true);
+}
+
+tree.addEventListener("pointerdown", (event) => {
+  if (event.button !== 0 || moving || dragCandidate) return;
+  if (event.target.closest(".visibility-toggle")) return;
+  const row = event.target.closest(".tree-row");
+  const node = row?.closest(".draggable-node");
+  const ownRow = node?.matches(".question-node") ? node : node?.querySelector(":scope > .tree-row");
+  if (!node || row !== ownRow) return;
+  dragCandidate = { node, pointerId: event.pointerId, pointerType: event.pointerType, x: event.clientX, y: event.clientY, blocked: false, timer: null };
+  if (event.pointerType === "touch") {
+    const candidate = dragCandidate;
+    candidate.timer = setTimeout(() => {
+      if (dragCandidate !== candidate || candidate.blocked) return;
+      suppressNextTreeClick = true;
+      if (!beginTreeDrag(candidate.node)) { candidate.blocked = true; return; }
+      tree.setPointerCapture(candidate.pointerId);
+    }, 300);
+  }
 });
-tree.addEventListener("dragend", () => {
-  if (draggedItem) restoreDragPreview(draggedItem);
+
+window.addEventListener("pointermove", (event) => {
+  if (!dragCandidate || event.pointerId !== dragCandidate.pointerId) return;
+  if (!draggedItem) {
+    const distance = Math.hypot(event.clientX - dragCandidate.x, event.clientY - dragCandidate.y);
+    if (dragCandidate.pointerType === "touch") {
+      if (distance >= 6) { clearTimeout(dragCandidate.timer); dragCandidate.blocked = true; }
+      return;
+    }
+    if (dragCandidate.blocked || distance < 6) return;
+    suppressNextTreeClick = true;
+    if (!beginTreeDrag(dragCandidate.node)) { dragCandidate.blocked = true; return; }
+    tree.setPointerCapture(event.pointerId);
+  }
+  event.preventDefault();
+  dragPointer = { x: event.clientX, y: event.clientY };
+  updateAutoScroll(event.clientY);
+  previewDragAt(event.clientX, event.clientY);
+});
+
+tree.addEventListener("touchmove", (event) => {
+  if (draggedItem) event.preventDefault();
+}, { passive: false });
+
+function finishTreeDrag(event, cancelled = false) {
+  if (!dragCandidate || event.pointerId !== dragCandidate.pointerId) return;
+  clearTimeout(dragCandidate.timer);
+  const item = draggedItem;
+  const wasDragging = Boolean(item);
+  if (tree.hasPointerCapture(event.pointerId)) tree.releasePointerCapture(event.pointerId);
+  dragCandidate = null;
   draggedItem = null;
+  dragPointer = null;
   stopAutoScroll();
-  tree.querySelectorAll(".dragging").forEach((node) => node.classList.remove("dragging"));
-});
-tree.addEventListener("dragover", (event) => {
-  if (draggedItem) updateAutoScroll(event.clientY);
-  const node = event.target.closest(".draggable-node");
-  if (!draggedItem || !node || node.dataset.moveKind !== draggedItem.kind) return;
-  if (node === draggedItem.sourceNode) {
-    if (draggedItem.previewChanged) event.preventDefault();
+  tree.classList.remove("drag-active");
+  document.body.classList.remove("reordering");
+  if (!wasDragging) {
+    if (suppressNextTreeClick) setTimeout(() => { suppressNextTreeClick = false; }, 0);
     return;
   }
-  if (draggedItem.kind !== "chapter" && node.dataset.movePath !== draggedItem.path) return;
-  if (draggedItem.kind === "question" && node.closest(".section-node")?.dataset.sectionId !== tree.querySelector(`.question-node[data-move-id="${CSS.escape(draggedItem.id)}"]`)?.closest(".section-node")?.dataset.sectionId) return;
-  if (draggedItem.kind === "chapter") {
-    const sourceGroup = state.book.documents.find((item) => item.path === draggedItem.id)?.group;
-    const targetGroup = state.book.documents.find((item) => item.path === node.dataset.moveId)?.group;
-    if (sourceGroup !== targetGroup && !(sourceGroup?.startsWith("part-") && targetGroup?.startsWith("part-"))) return;
-  }
   event.preventDefault();
-  const row = node.matches(".tree-row") ? node : node.querySelector(".tree-row");
-  const after = event.clientY > row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2;
-  const reference = after ? node.nextSibling : node;
-  draggedItem.previewTarget = node.dataset.moveId;
-  draggedItem.previewPosition = after ? "after" : "before";
-  if (reference !== draggedItem.sourceNode && draggedItem.sourceNode.nextSibling !== reference) {
-    const before = rowPositions(draggedItem.kind, draggedItem.path);
-    node.parentElement.insertBefore(draggedItem.sourceNode, reference);
-    draggedItem.previewChanged = draggedItem.sourceNode.parentElement !== draggedItem.originalParent
-      || draggedItem.sourceNode.nextElementSibling !== draggedItem.originalNextElementSibling;
-    updateOutlineNumbers();
-    animateReorder(draggedItem.kind, draggedItem.path, before, draggedItem.sourceNode.dataset.animationKey, true);
-  }
-  event.dataTransfer.dropEffect = "move";
-});
-tree.addEventListener("drop", async (event) => {
-  if (!draggedItem) return;
-  event.preventDefault();
-  const item = draggedItem;
-  draggedItem = null;
-  stopAutoScroll();
   item.sourceNode.classList.remove("dragging");
-  if (!item.previewChanged) { restoreExpandedSections(item.path, item.expandedKeys); return; }
-  await reorder(item.kind, item.id, item.previewTarget, item.path, item.previewPosition, item.expandedKeys, item);
+  const bounds = tree.getBoundingClientRect();
+  const inside = event.clientX >= bounds.left && event.clientX <= bounds.right
+    && event.clientY >= bounds.top && event.clientY <= bounds.bottom;
+  if (cancelled || !inside || !item.previewChanged) restoreDragPreview(item);
+  else reorder(item.kind, item.id, item.previewTarget, item.path, item.previewPosition, item.expandedKeys, item);
+  setTimeout(() => { suppressNextTreeClick = false; }, 0);
+}
+
+window.addEventListener("pointerup", (event) => finishTreeDrag(event));
+window.addEventListener("pointercancel", (event) => finishTreeDrag(event, true));
+window.addEventListener("blur", () => {
+  if (dragCandidate) finishTreeDrag({ pointerId: dragCandidate.pointerId, clientX: -1, clientY: -1, preventDefault() {} }, true);
 });
-document.addEventListener("dragover", (event) => {
-  if (draggedItem && !tree.contains(event.target)) stopAutoScroll();
-});
+tree.addEventListener("click", (event) => {
+  if (!suppressNextTreeClick) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  suppressNextTreeClick = false;
+}, true);
 
 tree.addEventListener("click", async (event) => {
   const button = event.target.closest("button");
   if (!button) return;
+  if (button.dataset.action === "toggle-question-visibility") {
+    await setQuestionHidden(button.dataset.path, button.dataset.nodeId, button.dataset.hidden !== "true");
+    return;
+  }
   if (button.dataset.action === "open-document") await openDocument(button.dataset.path);
   else if (button.dataset.kind === "section") {
     const sectionNode = button.closest(".section-node");
@@ -811,6 +970,7 @@ document.querySelectorAll(".mode-switch button").forEach((button) => button.addE
   setMode(button.dataset.mode);
 }));
 saveButton.addEventListener("click", saveSelection);
+$("#delete-question-button").addEventListener("click", deleteQuestion);
 $("#render-button").addEventListener("click", renderBook);
 $("#preview-button").addEventListener("click", () => window.open("/book/", "_blank"));
 $("#dialog-preview").addEventListener("click", () => window.open("/book/", "_blank"));

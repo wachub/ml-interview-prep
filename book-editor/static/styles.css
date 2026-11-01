@@ -23,6 +23,7 @@
 
 html, body { margin: 0; min-height: 100%; background: var(--page); color: var(--text); font-family: var(--font); }
 body { overflow: hidden; }
+body.reordering { user-select: none; }
 button, input, textarea { font: inherit; }
 button { color: inherit; }
 
@@ -90,6 +91,7 @@ button { color: inherit; }
 .search-box input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); font-size: 13px; }
 .search-box input::placeholder { color: #6f7e77; }
 .book-tree { flex: 1; overflow: auto; padding: 0 9px 18px; }
+.book-tree.drag-active, .book-tree.drag-active * { cursor: grabbing !important; }
 .book-tree::-webkit-scrollbar, textarea::-webkit-scrollbar { width: 9px; height: 9px; }
 .book-tree::-webkit-scrollbar-thumb, textarea::-webkit-scrollbar-thumb { background: #334139; border-radius: 99px; border: 2px solid transparent; background-clip: content-box; }
 
@@ -98,10 +100,7 @@ button { color: inherit; }
 .tree-row { position: relative; display: flex; align-items: center; min-width: 0; border-radius: 8px; }
 .draggable-node > .tree-row, .question-node { transition: opacity .16s ease, background .16s ease; }
 .tree-row > .document-button, .tree-row > .tree-item { min-width: 0; flex: 1; }
-.drag-grip { flex: none; width: 14px; margin-left: 3px; color: #72897b; opacity: .72; font-size: 17px; line-height: 1; cursor: grab; user-select: none; pointer-events: none; }
-.draggable-node > .tree-row { cursor: grab; }
-.drag-spacer { flex: none; width: 17px; }
-.tree-row:hover .drag-grip, .tree-row:focus-within .drag-grip { color: var(--accent); opacity: .9; }
+.draggable-node > .tree-row, .question-node { cursor: grab; }
 .draggable-node.dragging > .tree-row, .question-node.dragging {
   opacity: .55; background: #183027; box-shadow: inset 0 0 0 1px rgba(112,215,173,.26);
 }
@@ -131,6 +130,14 @@ button { color: inherit; }
 .tree-item.question { display: flex; align-items: baseline; gap: 7px; padding-left: 7px; }
 .question-number { min-width: 40px; }
 .question-label { min-width: 0; }
+.is-hidden-question .question-label { color: #89978f; }
+.hidden-indicator { display: inline-flex; flex: none; width: 15px; height: 15px; align-self: center; color: #e8c77e; opacity: .9; }
+.hidden-indicator svg { display: block; width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.visibility-toggle { flex: none; display: inline-grid; place-items: center; width: 27px; height: 27px; margin-right: 4px; padding: 5px; border: 0; border-radius: 7px; background: transparent; color: var(--muted); opacity: .48; cursor: pointer; }
+.visibility-toggle svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.visibility-toggle.is-hidden { color: #e8c77e; opacity: .95; }
+.visibility-toggle:hover, .visibility-toggle:focus-visible { color: var(--accent-strong); opacity: 1; background: var(--surface-hover); outline: none; }
+.visibility-toggle:focus-visible { box-shadow: inset 0 0 0 1px var(--accent); }
 .tree-item.active { color: var(--accent-strong); background: #17251f; }
 .tree-item.filtered-out, .document-node.filtered-out, .section-node.filtered-out { display: none; }
 .sidebar-footer { min-height: 45px; padding: 12px 17px; display: flex; align-items: center; gap: 8px; border-top: 1px solid var(--line); color: var(--muted); font-size: 12px; }
@@ -151,6 +158,8 @@ button { color: inherit; }
 .file-meta { display: flex; gap: 9px; color: var(--muted); font: 12px var(--mono); }
 .file-meta span + span::before { content: "•"; margin-right: 9px; }
 .mode-switch { flex: none; display: flex; padding: 3px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; }
+.question-actions { display: flex; gap: 7px; flex: none; }
+.question-actions .button { white-space: nowrap; }
 .mode-switch button { border: 0; border-radius: 7px; padding: 7px 11px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; font-weight: 700; }
 .mode-switch button.active { color: var(--text); background: var(--surface-hover); }
 
@@ -236,4 +245,8 @@ textarea.code-editor { min-height: calc(100vh - 290px); }
   .field-head { display: block; }
   .field-head span { display: block; margin-top: -3px; }
   .section-actions { align-items: flex-start; flex-direction: column; }
+}
+
+@media (max-width: 700px) {
+  .question-actions { margin-top: 12px; }
 }

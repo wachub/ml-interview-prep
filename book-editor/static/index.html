@@ -32,7 +32,7 @@
             <span>⌕</span>
             <input id="search-input" type="search" placeholder="Search chapters and questions" />
           </label>
-          <p class="reorder-hint">Drag to preview · Drop to save · Render updates HTML</p>
+          <p class="reorder-hint">Drag tiles to reorder · Drop to save · Render updates HTML</p>
         </div>
         <nav id="book-tree" class="book-tree" aria-label="Book contents"></nav>
         <div class="sidebar-footer">
@@ -54,6 +54,9 @@
               <div class="eyebrow" id="editor-kind">QUESTION</div>
               <h1 id="editor-title">Select an item</h1>
               <div class="file-meta"><span id="file-path"></span><span id="line-number"></span></div>
+            </div>
+            <div class="question-actions hidden" id="question-actions">
+              <button class="button danger" id="delete-question-button">Delete question</button>
             </div>
             <div class="mode-switch" role="tablist" aria-label="Editor mode">
               <button class="active" data-mode="structured">Structured</button>

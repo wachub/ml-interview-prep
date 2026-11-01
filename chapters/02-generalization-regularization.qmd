@@ -34,7 +34,6 @@ A validation or test set **measures** generalization. Regularization **changes t
 If you inspect the “test” score and then change the model, those examples are no longer functioning as a true test set; they have become validation data.
 :::
 </details>
-
 ### Q: Why do we need a validation set? Why not train on one set and evaluate on the test set? {#q-why-validation-set .qa-card}
 
 **Short answer:** Validation is needed for model selection, not because machine learning intrinsically requires three physical datasets. If the entire learning procedure is fixed before test evaluation, training once and testing once is valid. In real development, held-out feedback guides adaptive choices, so we use validation data and preserve the test set for final evaluation.
@@ -75,7 +74,6 @@ After selecting and freezing the complete procedure, we may retrain it on the co
 - Must training and validation remain permanently separate? No. They can be combined for a final refit after the procedure is frozen, provided the test set remains untouched.
 :::
 </details>
-
 ### Q: What happens if I inspect test performance and then change my model? {#q-reusing-test-set .qa-card}
 
 **Short answer:** The test result has influenced development, so that dataset is now functioning as another validation set. For a credible final estimate, evaluate the newly frozen procedure on a fresh untouched test set—or explicitly acknowledge that the original test result is no longer an independent final evaluation.

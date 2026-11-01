@@ -33,6 +33,16 @@ PART_RE = re.compile(r'^\s*-\s+part:\s*["\']?(.+?)["\']?\s*$')
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 QUESTION_RE = re.compile(r"^###\s+Q:\s*(.*?)\s*(\{[^}]*\})?\s*$")
 TAB_RE = re.compile(r"^####\s+(.+?)\s*$")
+HIDDEN_START = "<!-- book-editor:hidden-question:start -->"
+HIDDEN_END = "<!-- book-editor:hidden-question:end -->"
+HIDDEN_BLOCK_RE = re.compile(
+    re.escape(HIDDEN_START)
+    + r'\s*\n(?:(?P<conditional>:::: \{\.content-hidden when-format="html"\})\s*\n)?'
+    + r'(?P<body>.*?)(?:\n::::\s*)?\n'
+    + re.escape(HIDDEN_END)
+    + r"(?:\r?\n)?",
+    re.DOTALL,
+)
 
 
 def digest(text: str) -> str:
@@ -211,6 +221,22 @@ def parse_document(path: str, text: str) -> dict:
         title = Path(path).stem.replace("-", " ").title()
     sections: list[dict] = []
     h2s = [item for item in headings if item["level"] == 2]
+    hidden_ranges = []
+    for match in HIDDEN_BLOCK_RE.finditer(text):
+        inner_start = match.start("body")
+        inner_end = match.end("body")
+        hidden_heading = next(
+            (item for item in headings if item["level"] == 3 and inner_start <= item["start"] < inner_end and QUESTION_RE.match(item["text"])),
+            None,
+        )
+        if hidden_heading:
+            hidden_ranges.append({
+                "start": match.start(),
+                "end": match.end(),
+                "heading": hidden_heading,
+                "raw_end": match.end("body"),
+                "conditional": match.group("conditional") is not None,
+            })
 
     for section_index, section in enumerate(h2s):
         section_end = h2s[section_index + 1]["start"] if section_index + 1 < len(h2s) else len(text)
@@ -222,7 +248,11 @@ def parse_document(path: str, text: str) -> dict:
             and item["start"] < section_end
             and QUESTION_RE.match(item["text"])
         ]
-        first_question = questions[0]["start"] if questions else section_end
+        def source_start(item: dict) -> int:
+            hidden = next((block for block in hidden_ranges if block["heading"] is item), None)
+            return hidden["start"] if hidden else item["start"]
+
+        first_question = source_start(questions[0]) if questions else section_end
         section_raw = text[section["start"]:first_question]
         section_attributes = re.search(r"(\{[^}]*\})\s*$", section["heading"])
         section_node = {
@@ -239,17 +269,22 @@ def parse_document(path: str, text: str) -> dict:
             "questions": [],
         }
         for question_index, question in enumerate(questions):
-            next_question = questions[question_index + 1]["start"] if question_index + 1 < len(questions) else section_end
-            raw = text[question["start"]:next_question].rstrip() + "\n"
+            hidden = next((block for block in hidden_ranges if block["heading"] is question), None)
+            question_start = source_start(question)
+            question_end = hidden["end"] if hidden else (source_start(questions[question_index + 1]) if question_index + 1 < len(questions) else section_end)
+            raw_end = hidden["raw_end"] if hidden else question_end
+            raw = text[question["start"]:raw_end].rstrip() + "\n"
             parsed = parse_question(raw)
             section_node["questions"].append(
                 {
                     "id": f"section-{section_index}-question-{question_index}",
                     "animationKey": digest(raw),
                     "kind": "question",
-                    "start": question["start"],
-                    "end": next_question,
+                    "start": question_start,
+                    "end": question_end,
                     "line": question["number"],
+                    "hidden": hidden is not None,
+                    "conditionalHidden": hidden["conditional"] if hidden else False,
                     **parsed,
                 }
             )
@@ -296,7 +331,7 @@ def book_summary() -> dict:
                         "animationKey": section["animationKey"],
                         "title": section["title"],
                         "questions": [
-                            {"id": question["id"], "animationKey": question["animationKey"], "title": question.get("title", "")}
+                            {"id": question["id"], "animationKey": question["animationKey"], "title": question.get("title", ""), "hidden": question["hidden"]}
                             for question in section["questions"]
                         ],
                     }
@@ -461,6 +496,10 @@ a{{color:#96ebc8}}h1{{line-height:1.2}}</style></head>
                 self.handle_save(payload)
             elif parsed.path == "/api/reorder":
                 self.handle_reorder(payload)
+            elif parsed.path == "/api/question-visibility":
+                self.handle_question_visibility(payload)
+            elif parsed.path == "/api/delete-question":
+                self.handle_delete_question(payload)
             elif parsed.path == "/api/render":
                 self.handle_render()
             else:
@@ -500,6 +539,54 @@ a{{color:#96ebc8}}h1{{line-height:1.2}}</style></head>
                 "document": parse_document(path, content),
             }
         )
+
+    def handle_question_visibility(self, payload: dict) -> None:
+        hidden = payload.get("hidden")
+        if not isinstance(hidden, bool):
+            raise ValueError("Choose whether the question should be hidden.")
+        path = str(payload.get("path", ""))
+        file_path = allowed_path(path)
+        with SAVE_LOCK:
+            content = file_path.read_text(encoding="utf-8")
+            if payload.get("expectedHash") != digest(content):
+                self.send_error_json("This chapter changed on disk. Reload it before changing a question.", HTTPStatus.CONFLICT)
+                return
+            parsed = parse_document(path, content)
+            question_id = str(payload.get("questionId", ""))
+            question = next((q for section in parsed["sections"] for q in section["questions"] if q["id"] == question_id), None)
+            if question is None:
+                raise ValueError("Choose a question in this chapter.")
+            if question["hidden"] == hidden and (not hidden or question["conditionalHidden"]):
+                self.send_json({"ok": True, "unchanged": True, "document": parsed})
+                return
+            raw = question["raw"].rstrip("\r\n")
+            replacement = (
+                f'{HIDDEN_START}\n:::: {{.content-hidden when-format="html"}}\n{raw}\n::::\n{HIDDEN_END}\n'
+                if hidden
+                else question["raw"]
+            )
+            updated = content[:question["start"]] + replacement + content[question["end"]:]
+            backup = write_with_backup(file_path, updated)
+        self.send_json({"ok": True, "backup": backup, "document": parse_document(path, updated)})
+
+    def handle_delete_question(self, payload: dict) -> None:
+        path = str(payload.get("path", ""))
+        file_path = allowed_path(path)
+        with SAVE_LOCK:
+            content = file_path.read_text(encoding="utf-8")
+            if payload.get("expectedHash") != digest(content):
+                self.send_error_json("This chapter changed on disk. Reload it before deleting a question.", HTTPStatus.CONFLICT)
+                return
+            parsed = parse_document(path, content)
+            question_id = str(payload.get("questionId", ""))
+            question = next((q for section in parsed["sections"] for q in section["questions"] if q["id"] == question_id), None)
+            if question is None:
+                raise ValueError("Choose a question in this chapter.")
+            updated = content[:question["start"]] + content[question["end"]:]
+            if not updated.strip():
+                raise ValueError("Refusing to delete the entire document.")
+            backup = write_with_backup(file_path, updated)
+        self.send_json({"ok": True, "backup": backup, "document": parse_document(path, updated)})
 
     def handle_reorder(self, payload: dict) -> None:
         kind = payload.get("kind")
@@ -576,6 +663,7 @@ a{{color:#96ebc8}}h1{{line-height:1.2}}</style></head>
             self.send_error_json("The book is already rendering.", HTTPStatus.CONFLICT)
             return
         try:
+            migrated = self.upgrade_legacy_hidden_questions()
             try:
                 result = subprocess.run(
                     ["quarto", "render"],
@@ -592,9 +680,36 @@ a{{color:#96ebc8}}h1{{line-height:1.2}}</style></head>
                 )
                 return
             output = (result.stdout or "") + (result.stderr or "")
-            self.send_json({"ok": result.returncode == 0, "output": output, "returnCode": result.returncode})
+            self.send_json({"ok": result.returncode == 0, "output": output, "returnCode": result.returncode, "migrated": migrated})
         finally:
             RENDER_LOCK.release()
+
+    def upgrade_legacy_hidden_questions(self) -> list[dict]:
+        """Wrap previously hidden HTML-comment blocks in Quarto conditional divs."""
+        migrated = []
+        with SAVE_LOCK:
+            config = (PROJECT_ROOT / "_quarto.yml").read_text(encoding="utf-8")
+            for entry in chapter_entries(config):
+                path = entry["path"]
+                file_path = allowed_path(path)
+                content = file_path.read_text(encoding="utf-8")
+                parsed = parse_document(path, content)
+                legacy = [
+                    question
+                    for section in parsed["sections"]
+                    for question in section["questions"]
+                    if question["hidden"] and not question["conditionalHidden"]
+                ]
+                if not legacy:
+                    continue
+                updated = content
+                for question in sorted(legacy, key=lambda item: item["start"], reverse=True):
+                    raw = question["raw"].rstrip("\r\n")
+                    replacement = f'{HIDDEN_START}\n:::: {{.content-hidden when-format="html"}}\n{raw}\n::::\n{HIDDEN_END}\n'
+                    updated = updated[:question["start"]] + replacement + updated[question["end"]:]
+                backup = write_with_backup(file_path, updated)
+                migrated.append({"path": path, "backup": backup})
+        return migrated
 
 
 def main() -> None:
