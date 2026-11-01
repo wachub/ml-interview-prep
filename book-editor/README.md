@@ -15,6 +15,10 @@ This is a local, browser-based editor for the Quarto book. It keeps the existing
 - falling back to raw Quarto Markdown whenever a block has unusual markup;
 - running `quarto render` and opening the rendered book.
 
+The rendered book has a compact **Aa** menu beside its sidebar title for theme,
+text size, line spacing, and sans/serif reading font. These choices persist in
+the browser. **Reset** restores the defaults.
+
 Select a section and choose **Add question to this section** to draft a new
 question. Fill in its title, short answer, and explanation tabs, then choose
 **Save changes** to add it to the source file.

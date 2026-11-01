@@ -62,8 +62,6 @@ A class label, residual, click indicator, and model output can each be modeled a
 In a fully measure-theoretic treatment, a random variable is also required to be measurable. That detail is not usually needed for ML interviews.
 :::
 </details>
-
-
 ### Q: When would you use Bernoulli, Binomial, or Gaussian modeling? {.qa-card}
 
 **Short answer:** Use Bernoulli for one binary event, such as click/no click; Binomial for the count of successes in fixed independent Bernoulli trials; and Gaussian modeling for continuous residuals that are plausibly symmetric around zero with roughly constant spread.
@@ -97,8 +95,6 @@ Yo yo
 
 ## Expectation and Variance
 
-<!-- book-editor:hidden-question:start -->
-:::: {.content-hidden when-format="html"}
 ### Q: What is expectation? {.qa-card}
 
 **Short answer:** For a discrete random variable, expectation is its probability-weighted average:
@@ -121,10 +117,6 @@ Expectation is the average value over repeated draws, weighted by how often each
 Many learning objectives minimize an expected loss; empirical risk is the sample-based approximation used in practice.
 :::
 </details>
-::::
-<!-- book-editor:hidden-question:end -->
-<!-- book-editor:hidden-question:start -->
-:::: {.content-hidden when-format="html"}
 ### Q: A fair six-sided die is rolled once. What are $E[X]$ and $E[X^2]$? {.qa-card}
 
 **Short answer:**
@@ -147,8 +139,6 @@ $$
 $E[X^2]$ is not $(E[X])^2$. The difference between them is central to variance.
 :::
 </details>
-::::
-<!-- book-editor:hidden-question:end -->
 ### Q: What is variance? State a useful equivalent identity. {.qa-card}
 
 

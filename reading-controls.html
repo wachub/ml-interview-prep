@@ -1,0 +1,119 @@
+<script>
+(() => {
+  const prefix = "ml-interview-prep:reader-";
+  const defaults = { size: 100, spacing: 1.7, font: "sans" };
+  const root = document.documentElement;
+  const save = (key, value) => { try { localStorage.setItem(prefix + key, String(value)); } catch {} };
+  function savedNumber(key, fallback, min, max, step) {
+    try {
+      const value = Number(localStorage.getItem(prefix + key));
+      return Number.isFinite(value) && value >= min && value <= max && Math.abs(Math.round((value - min) / step) * step + min - value) < .001 ? value : fallback;
+    } catch { return fallback; }
+  }
+
+  function initialize() {
+    const sidebar = document.querySelector("#quarto-sidebar");
+    const header = sidebar?.querySelector(".sidebar-header");
+    const tools = sidebar?.querySelector(".sidebar-tools-main");
+    if (!sidebar || !header || !tools) return;
+
+    const trigger = document.createElement("button");
+    trigger.className = "reader-settings-trigger";
+    trigger.type = "button";
+    trigger.textContent = "Aa";
+    trigger.title = "Appearance and reading settings";
+    trigger.setAttribute("aria-label", "Appearance and reading settings");
+    trigger.setAttribute("aria-controls", "reader-settings-panel");
+    trigger.setAttribute("aria-expanded", "false");
+    tools.append(trigger);
+
+    const panel = document.createElement("div");
+    panel.id = "reader-settings-panel";
+    panel.className = "reader-settings-panel";
+    panel.setAttribute("role", "group");
+    panel.setAttribute("aria-label", "Appearance and reading settings");
+    panel.hidden = true;
+    panel.innerHTML = `
+      <div class="reader-settings-head"><strong>Appearance</strong><button class="reader-controls-reset" type="button">Reset</button></div>
+      <div class="reader-control">
+        <div class="reader-control-label">Theme</div>
+        <div class="reader-segmented" role="group" aria-label="Book theme">
+          <button type="button" data-reader-theme="light">Light</button><button type="button" data-reader-theme="dark">Dark</button>
+        </div>
+      </div>
+      <div class="reader-control">
+        <label class="reader-control-label" for="reader-size"><span>Text size</span><output for="reader-size" id="reader-size-value"></output></label>
+        <input id="reader-size" type="range" min="85" max="140" step="5" aria-label="Reading text size">
+      </div>
+      <div class="reader-control">
+        <label class="reader-control-label" for="reader-spacing"><span>Line spacing</span><output for="reader-spacing" id="reader-spacing-value"></output></label>
+        <input id="reader-spacing" type="range" min="1.4" max="2.0" step="0.1" aria-label="Reading line spacing">
+      </div>
+      <div class="reader-control">
+        <div class="reader-control-label">Reading font</div>
+        <div class="reader-segmented" role="group" aria-label="Reading font">
+          <button type="button" data-reader-font="sans">Sans</button><button type="button" data-reader-font="serif">Serif</button>
+        </div>
+      </div>`;
+    header.append(panel);
+    document.body.classList.add("reader-settings-ready");
+    const originalToggle = tools.querySelector(".quarto-color-scheme-toggle");
+    if (originalToggle) { originalToggle.tabIndex = -1; originalToggle.setAttribute("aria-hidden", "true"); }
+
+    const sizeInput = panel.querySelector("#reader-size");
+    const spacingInput = panel.querySelector("#reader-spacing");
+    let font;
+    try { font = localStorage.getItem(prefix + "font") === "serif" ? "serif" : "sans"; }
+    catch { font = "sans"; }
+    function syncTheme() {
+      const dark = document.body.classList.contains("quarto-dark");
+      panel.querySelectorAll("[data-reader-theme]").forEach((button) => button.setAttribute("aria-pressed", String((button.dataset.readerTheme === "dark") === dark)));
+    }
+    function applyReading() {
+      const size = Number(sizeInput.value);
+      const spacing = Number(spacingInput.value);
+      root.style.setProperty("--reader-font-scale", String(size / 100));
+      root.style.setProperty("--reader-line-height", String(spacing));
+      root.style.setProperty("--reader-font-family", font === "serif" ? "Georgia, Cambria, 'Times New Roman', serif" : "inherit");
+      panel.querySelector("#reader-size-value").value = `${size}%`;
+      panel.querySelector("#reader-spacing-value").value = `${spacing.toFixed(1)}×`;
+      panel.querySelectorAll("[data-reader-font]").forEach((button) => button.setAttribute("aria-pressed", String(button.dataset.readerFont === font)));
+    }
+    sizeInput.value = savedNumber("size", defaults.size, 85, 140, 5);
+    spacingInput.value = savedNumber("spacing", defaults.spacing, 1.4, 2.0, .1);
+    applyReading();
+    syncTheme();
+    sizeInput.addEventListener("input", () => { applyReading(); save("size", Number(sizeInput.value)); });
+    spacingInput.addEventListener("input", () => { applyReading(); save("spacing", Number(spacingInput.value)); });
+    panel.querySelectorAll("[data-reader-font]").forEach((button) => button.addEventListener("click", () => {
+      font = button.dataset.readerFont;
+      applyReading();
+      save("font", font);
+    }));
+    panel.querySelectorAll("[data-reader-theme]").forEach((button) => button.addEventListener("click", () => {
+      if (document.body.classList.contains("quarto-dark") !== (button.dataset.readerTheme === "dark")) window.quartoToggleColorScheme();
+      syncTheme();
+    }));
+
+    function setPanelOpen(open) { panel.hidden = !open; trigger.setAttribute("aria-expanded", String(open)); }
+    trigger.addEventListener("click", () => setPanelOpen(panel.hidden));
+    document.addEventListener("pointerdown", (event) => {
+      if (!panel.hidden && !panel.contains(event.target) && event.target !== trigger) setPanelOpen(false);
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !panel.hidden) { setPanelOpen(false); trigger.focus(); }
+    });
+    panel.querySelector(".reader-controls-reset").addEventListener("click", () => {
+      sizeInput.value = defaults.size;
+      spacingInput.value = defaults.spacing;
+      font = defaults.font;
+      applyReading();
+      for (const key of ["size", "spacing", "font"]) save(key, defaults[key]);
+      if (!document.body.classList.contains("quarto-dark")) window.quartoToggleColorScheme();
+      syncTheme();
+    });
+  }
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", initialize);
+  else initialize();
+})();
+</script>

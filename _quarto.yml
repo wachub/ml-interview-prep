@@ -36,8 +36,11 @@ book:
 
 format:
   html:
-    theme: cosmo
+    theme:
+      dark: darkly
+      light: cosmo
     css: styles.css
+    include-after-body: reading-controls.html
     toc: true
     toc-depth: 3
     number-sections: true

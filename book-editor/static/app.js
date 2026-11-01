@@ -115,17 +115,29 @@ function renderDocumentChildren(documentData, expand = false) {
     const hiddenQuestionCount = section.questions.filter((question) => question.hidden).length;
     const sectionNumber = `${chapter}.${sectionIndex + 1}`;
     items.push(`<div class="section-node draggable-node ${expandedSections.has(section.id) ? "open" : ""} ${hasQuestions ? "has-questions" : ""}" data-move-kind="section" data-move-id="${section.id}" data-move-path="${escapeHtml(documentData.path)}" data-section-id="${section.id}" data-animation-key="section:${escapeHtml(section.animationKey || section.id)}" title="Drag to reorder within this chapter"><div class="tree-row">
-      <button class="tree-item section" data-kind="section" data-node-id="${section.id}" data-path="${escapeHtml(documentData.path)}" ${hasQuestions ? `aria-expanded="${expandedSections.has(section.id)}"` : ""}>
+      <button class="tree-item section" data-kind="section" data-node-id="${section.id}" data-path="${escapeHtml(documentData.path)}" data-search="${escapeHtml(section.title.toLowerCase())}" ${hasQuestions ? `aria-expanded="${expandedSections.has(section.id)}"` : ""}>
         <span class="section-chevron" aria-hidden="true">${hasQuestions ? "›" : ""}</span><span class="outline-number section-number">${sectionNumber}</span><span class="section-label">${escapeHtml(section.title)}</span>${hiddenQuestionCount ? `<span class="hidden-indicator" role="img" aria-label="${hiddenQuestionCount} hidden question${hiddenQuestionCount === 1 ? "" : "s"}" title="${hiddenQuestionCount} hidden question${hiddenQuestionCount === 1 ? "" : "s"}">${visibilityIcon(true)}</span>` : ""}
       </button></div><div class="section-children">`);
     section.questions.forEach((question, questionIndex) => {
       const label = question.title ? `Q: ${question.title}` : "Question (raw QMD)";
       const action = question.hidden ? "Show question in rendered book" : "Hide question from rendered book";
-      items.push(`<div class="question-node draggable-node tree-row ${question.hidden ? "is-hidden-question" : ""}" data-move-kind="question" data-move-id="${question.id}" data-move-path="${escapeHtml(documentData.path)}" data-animation-key="question:${escapeHtml(question.animationKey || question.id)}" title="Drag to reorder within this section"><button class="tree-item question" data-node-id="${question.id}" data-path="${escapeHtml(documentData.path)}"><span class="outline-number question-number">${sectionNumber}.${questionIndex + 1}</span><span class="question-label">${escapeHtml(label)}</span></button><button class="visibility-toggle ${question.hidden ? "is-hidden" : ""}" type="button" data-action="toggle-question-visibility" data-node-id="${question.id}" data-path="${escapeHtml(documentData.path)}" data-hidden="${question.hidden}" aria-label="${action}" title="${action}">${visibilityIcon(question.hidden)}</button></div>`);
+      items.push(`<div class="question-node draggable-node tree-row ${question.hidden ? "is-hidden-question" : ""}" data-move-kind="question" data-move-id="${question.id}" data-move-path="${escapeHtml(documentData.path)}" data-animation-key="question:${escapeHtml(question.animationKey || question.id)}"><button class="tree-item question" data-node-id="${question.id}" data-path="${escapeHtml(documentData.path)}" data-search="${escapeHtml(label.toLowerCase())}"><span class="outline-number question-number">${sectionNumber}.${questionIndex + 1}</span><span class="question-label">${escapeHtml(label)}</span></button><button class="visibility-toggle ${question.hidden ? "is-hidden" : ""}" type="button" data-action="toggle-question-visibility" data-node-id="${question.id}" data-path="${escapeHtml(documentData.path)}" data-hidden="${question.hidden}" aria-label="${action}" title="${action}">${visibilityIcon(question.hidden)}</button></div>`);
     });
     items.push("</div></div>");
   });
   children.innerHTML = items.join("");
+  if (window.renderMathInElement) {
+    children.querySelectorAll(".section-label, .question-label").forEach((label) => {
+      window.renderMathInElement(label, {
+        delimiters: [
+          { left: "$$", right: "$$", display: false },
+          { left: "$", right: "$", display: false },
+          { left: "\\(", right: "\\)", display: false },
+        ],
+        throwOnError: false,
+      });
+    });
+  }
   if (expand) node.classList.add("open");
   document.querySelectorAll(".document-button").forEach((button) => button.classList.toggle("active", button.dataset.path === state.document?.path));
   filterTree($("#search-input").value);
@@ -520,11 +532,11 @@ function filterTree(query) {
     intro.classList.toggle("filtered-out", !introVisible);
     let visibleChildren = introVisible ? 1 : 0;
     documentNode.querySelectorAll(".section-node").forEach((sectionNode) => {
-      const sectionMatches = sectionNode.querySelector(".section-label").textContent.toLowerCase().includes(needle);
+      const sectionMatches = sectionNode.querySelector(".tree-item.section").dataset.search.includes(needle);
       let visibleQuestions = 0;
       sectionNode.querySelectorAll(".tree-item.question").forEach((question) => {
-        const visible = !needle || documentMatches || sectionMatches || question.textContent.toLowerCase().includes(needle);
-        question.classList.toggle("filtered-out", !visible);
+        const visible = !needle || documentMatches || sectionMatches || question.dataset.search.includes(needle);
+        question.closest(".question-node").classList.toggle("filtered-out", !visible);
         if (visible) visibleQuestions += 1;
       });
       const visible = !needle || documentMatches || sectionMatches || visibleQuestions > 0;
